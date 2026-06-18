@@ -4,6 +4,7 @@ import { logout } from '../services/auth'
 import { useAuth } from '../context/AuthContext'
 import { haalLokaleContacten } from '../services/lokaleContacten'
 import { haalSchuldpostenAlsSchuldeiser, type Schuldpost } from '../services/schuldposten'
+import { haalMijnGebruikersnaam } from '../services/gebruikers'
 
 const formatEuro = (bedrag: number) => '€ ' + bedrag.toFixed(2).replace('.', ',')
 
@@ -16,15 +17,18 @@ type Regel = { contactId: string; naam: string; bedrag: number }
 export default function Home() {
   const { session } = useAuth()
   const [regels, setRegels] = useState<Regel[]>([])
+  const [gebruikersnaam, setGebruikersnaam] = useState<string | null>(null)
   const [laden, setLaden] = useState(true)
 
   useEffect(() => {
     async function laad() {
       if (!session) return
-      const [{ data: contacten }, { data: posten }] = await Promise.all([
+      const [{ data: contacten }, { data: posten }, { data: profiel }] = await Promise.all([
         haalLokaleContacten(),
         haalSchuldpostenAlsSchuldeiser(session.user.id),
+        haalMijnGebruikersnaam(),
       ])
+      setGebruikersnaam(profiel?.gebruikersnaam ?? null)
 
       const naamPerId = new Map((contacten ?? []).map((c) => [c.id, c.naam]))
       const bedragPerContact = new Map<string, number>()
@@ -53,7 +57,10 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-xl font-medium text-[#3B6D11]">PayMeBack</h1>
+          <div>
+            <h1 className="text-xl font-medium text-[#3B6D11]">PayMeBack</h1>
+            {gebruikersnaam && <p className="text-xs text-gray-400">{gebruikersnaam}</p>}
+          </div>
           <button onClick={() => logout()} className="text-sm text-gray-500">
             Uitloggen
           </button>

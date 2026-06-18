@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, registreer } from '../services/auth'
+import { login, registreer, gebruikersnaamVrij } from '../services/auth'
 import { vertaalAuthFout } from '../services/authFouten'
 
 type Modus = 'login' | 'registreer'
 
 export default function Auth() {
   const [modus, setModus] = useState<Modus>('login')
-  const [naam, setNaam] = useState('')
+  const [gebruikersnaam, setGebruikersnaam] = useState('')
   const [email, setEmail] = useState('')
   const [wachtwoord, setWachtwoord] = useState('')
   const [fout, setFout] = useState<string | null>(null)
@@ -18,10 +18,33 @@ export default function Auth() {
   async function verstuur(e: FormEvent) {
     e.preventDefault()
     setFout(null)
+
+    if (modus === 'registreer' && !/^[A-Za-z0-9_]{3,20}$/.test(gebruikersnaam)) {
+      setFout('Gebruikersnaam: 3-20 tekens, enkel letters, cijfers en _.')
+      return
+    }
+
     setBezig(true)
 
+    // Bij registreren eerst checken of de gebruikersnaam nog vrij is.
+    if (modus === 'registreer') {
+      const { data: vrij, error: checkFout } = await gebruikersnaamVrij(gebruikersnaam)
+      if (checkFout) {
+        setBezig(false)
+        setFout('Kon de gebruikersnaam niet controleren. Probeer opnieuw.')
+        return
+      }
+      if (!vrij) {
+        setBezig(false)
+        setFout('Die gebruikersnaam is al bezet.')
+        return
+      }
+    }
+
     const { error } =
-      modus === 'login' ? await login(email, wachtwoord) : await registreer(email, wachtwoord, naam)
+      modus === 'login'
+        ? await login(email, wachtwoord)
+        : await registreer(email, wachtwoord, gebruikersnaam)
 
     setBezig(false)
 
@@ -68,9 +91,9 @@ export default function Auth() {
           {modus === 'registreer' && (
             <input
               type="text"
-              placeholder="Naam"
-              value={naam}
-              onChange={(e) => setNaam(e.target.value)}
+              placeholder="Gebruikersnaam, bv. voornaam_achternaam"
+              value={gebruikersnaam}
+              onChange={(e) => setGebruikersnaam(e.target.value)}
               required
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
             />
