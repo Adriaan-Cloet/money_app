@@ -4,6 +4,7 @@ import Auth from './pages/Auth'
 import Home from './pages/Home'
 import LokaleContacten from './pages/LokaleContacten'
 import NieuwePost from './pages/NieuwePost'
+import PersoonDetail from './pages/PersoonDetail'
 
 export default function App() {
   const { session, laden } = useAuth()
@@ -28,6 +29,10 @@ export default function App() {
       <Route
         path="/nieuw"
         element={session ? <NieuwePost /> : <Navigate to="/auth" replace />}
+      />
+      <Route
+        path="/contact/:id"
+        element={session ? <PersoonDetail /> : <Navigate to="/auth" replace />}
       />
     </Routes>
   )

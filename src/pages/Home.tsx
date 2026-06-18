@@ -79,14 +79,16 @@ export default function Home() {
         ) : (
           <ul className="space-y-2">
             {regels.map((regel) => (
-              <li
-                key={regel.contactId}
-                className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
-              >
-                <span className="text-sm font-medium">{regel.naam}</span>
-                <span className="text-sm font-medium text-[#3B6D11]">
-                  + {formatEuro(regel.bedrag)}
-                </span>
+              <li key={regel.contactId}>
+                <Link
+                  to={`/contact/${regel.contactId}`}
+                  className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
+                >
+                  <span className="text-sm font-medium">{regel.naam}</span>
+                  <span className="text-sm font-medium text-[#3B6D11]">
+                    + {formatEuro(regel.bedrag)}
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>

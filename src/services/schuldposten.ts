@@ -12,6 +12,15 @@ export async function haalSchuldpostenAlsSchuldeiser(userId: string) {
     .order('datum', { ascending: false })
 }
 
+// Alle posten van 1 lokaal contact (RLS beperkt tot je eigen posten).
+export async function haalSchuldpostenVoorContact(contactId: string) {
+  return supabase
+    .from('schuldposten')
+    .select('*')
+    .eq('schuldenaar_contact_id', contactId)
+    .order('datum', { ascending: false })
+}
+
 // Een terugvraag tegen een lokaal contact (zelfbeheer door de eigenaar).
 // De echte-gebruiker-variant volgt zodra de discovery-flow beslist is.
 export async function maakSchuldpostVoorContact(params: {

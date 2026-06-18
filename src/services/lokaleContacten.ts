@@ -16,6 +16,10 @@ export async function haalLokaleContacten() {
   return supabase.from('lokale_contacten').select('*').order('naam', { ascending: true })
 }
 
+export async function haalLokaalContact(id: string) {
+  return supabase.from('lokale_contacten').select('*').eq('id', id).single()
+}
+
 export async function maakLokaalContact(naam: string, eigenaarId: string) {
   const nieuw: TablesInsert<'lokale_contacten'> = { naam, eigenaar_id: eigenaarId }
   return supabase.from('lokale_contacten').insert(nieuw).select().single()
