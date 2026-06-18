@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
+import LokaleContacten from './pages/LokaleContacten'
 
 export default function App() {
   const { session, laden } = useAuth()
@@ -19,6 +20,10 @@ export default function App() {
     <Routes>
       <Route path="/auth" element={session ? <Navigate to="/" replace /> : <Auth />} />
       <Route path="/" element={session ? <Home /> : <Navigate to="/auth" replace />} />
+      <Route
+        path="/contacten"
+        element={session ? <LokaleContacten /> : <Navigate to="/auth" replace />}
+      />
     </Routes>
   )
 }
