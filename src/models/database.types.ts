@@ -196,12 +196,74 @@ export type Database = {
           },
         ]
       }
+      vriendschappen: {
+        Row: {
+          aangemaakt_op: string
+          id: string
+          ontvanger_id: string
+          status: string
+          verzoeker_id: string
+        }
+        Insert: {
+          aangemaakt_op?: string
+          id?: string
+          ontvanger_id: string
+          status?: string
+          verzoeker_id: string
+        }
+        Update: {
+          aangemaakt_op?: string
+          id?: string
+          ontvanger_id?: string
+          status?: string
+          verzoeker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vriendschappen_ontvanger_id_fkey"
+            columns: ["ontvanger_id"]
+            isOneToOne: false
+            referencedRelation: "gebruikers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vriendschappen_verzoeker_id_fkey"
+            columns: ["verzoeker_id"]
+            isOneToOne: false
+            referencedRelation: "gebruikers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      inkomende_verzoeken: {
+        Args: never
+        Returns: {
+          gebruikersnaam: string
+          verzoeker_id: string
+          vriendschap_id: string
+        }[]
+      }
       is_gebruikersnaam_vrij: { Args: { p_naam: string }; Returns: boolean }
+      is_vriend: { Args: { p_ander: string }; Returns: boolean }
+      vriendenlijst: {
+        Args: never
+        Returns: {
+          gebruiker_id: string
+          gebruikersnaam: string
+        }[]
+      }
+      zoek_gebruiker: {
+        Args: { p_naam: string }
+        Returns: {
+          gebruikersnaam: string
+          id: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

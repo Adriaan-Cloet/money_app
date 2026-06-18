@@ -8,7 +8,14 @@ import {
   lokaalContactFout,
   type LokaalContact,
 } from '../services/lokaleContacten'
-import { maakSchuldpostVoorContact } from '../services/schuldposten'
+import { haalVrienden } from '../services/vrienden'
+import {
+  maakSchuldpostVoorContact,
+  maakSchuldpostVoorGebruiker,
+} from '../services/schuldposten'
+
+type Vriend = { gebruiker_id: string; gebruikersnaam: string }
+type Keuze = { type: 'contact' | 'vriend'; id: string }
 
 const vandaag = () => new Date().toISOString().slice(0, 10)
 
@@ -17,20 +24,25 @@ export default function NieuwePost() {
   const navigate = useNavigate()
 
   const [contacten, setContacten] = useState<LokaalContact[]>([])
+  const [vrienden, setVrienden] = useState<Vriend[]>([])
   const [bedrag, setBedrag] = useState('')
-  const [contactId, setContactId] = useState<string | null>(null)
+  const [keuze, setKeuze] = useState<Keuze | null>(null)
   const [omschrijving, setOmschrijving] = useState('')
   const [datum, setDatum] = useState(vandaag())
   const [fout, setFout] = useState<string | null>(null)
   const [bezig, setBezig] = useState(false)
 
-  // Inline een nieuw contact toevoegen zonder de pagina te verlaten.
   const [toonNieuwContact, setToonNieuwContact] = useState(false)
   const [nieuwContactNaam, setNieuwContactNaam] = useState('')
 
   useEffect(() => {
     haalLokaleContacten().then(({ data }) => setContacten(data ?? []))
+    haalVrienden().then(({ data }) => setVrienden((data as Vriend[]) ?? []))
   }, [])
+
+  function isGekozen(type: Keuze['type'], id: string) {
+    return keuze?.type === type && keuze.id === id
+  }
 
   async function voegContactToe() {
     const naam = nieuwContactNaam.trim()
@@ -41,12 +53,11 @@ export default function NieuwePost() {
       return
     }
     setContacten((vorige) => [...vorige, data])
-    setContactId(data.id)
+    setKeuze({ type: 'contact', id: data.id })
     setNieuwContactNaam('')
     setToonNieuwContact(false)
   }
 
-  // Enter in het nieuw-contact-veldje voegt toe i.p.v. het formulier te versturen.
   function bijToets(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -63,19 +74,29 @@ export default function NieuwePost() {
       setFout('Vul een geldig bedrag in.')
       return
     }
-    if (!contactId || !session) {
+    if (!keuze || !session) {
       setFout('Kies van wie je dit terugvraagt.')
       return
     }
 
     setBezig(true)
-    const { error } = await maakSchuldpostVoorContact({
-      schuldeiserId: session.user.id,
-      schuldenaarContactId: contactId,
+    const gedeeld = {
       bedrag: bedragGetal,
       omschrijving: omschrijving.trim() || null,
       datum,
-    })
+    }
+    const { error } =
+      keuze.type === 'contact'
+        ? await maakSchuldpostVoorContact({
+            schuldeiserId: session.user.id,
+            schuldenaarContactId: keuze.id,
+            ...gedeeld,
+          })
+        : await maakSchuldpostVoorGebruiker({
+            schuldeiserId: session.user.id,
+            schuldenaarGebruikerId: keuze.id,
+            ...gedeeld,
+          })
     setBezig(false)
 
     if (error) {
@@ -84,6 +105,11 @@ export default function NieuwePost() {
     }
     navigate('/')
   }
+
+  const chipKlasse = (actief: boolean) =>
+    `rounded-lg px-3 py-1.5 text-sm border ${
+      actief ? 'border-2 border-[#3B6D11] font-medium' : 'border-gray-300 text-gray-600'
+    }`
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -110,24 +136,37 @@ export default function NieuwePost() {
 
           <div>
             <label className="block text-xs text-gray-500 mb-2">Van wie krijg je dit terug?</label>
+
+            {vrienden.length > 0 && (
+              <>
+                <p className="text-xs text-gray-400 mb-1">Vrienden</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {vrienden.map((vriend) => (
+                    <button
+                      key={vriend.gebruiker_id}
+                      type="button"
+                      onClick={() => setKeuze({ type: 'vriend', id: vriend.gebruiker_id })}
+                      className={chipKlasse(isGekozen('vriend', vriend.gebruiker_id))}
+                    >
+                      {vriend.gebruikersnaam}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <p className="text-xs text-gray-400 mb-1">Lokale contacten</p>
             <div className="flex flex-wrap gap-2">
-              {contacten.map((contact) => {
-                const gekozen = contact.id === contactId
-                return (
-                  <button
-                    key={contact.id}
-                    type="button"
-                    onClick={() => setContactId(contact.id)}
-                    className={`rounded-lg px-3 py-1.5 text-sm border ${
-                      gekozen
-                        ? 'border-2 border-[#3B6D11] font-medium'
-                        : 'border-gray-300 text-gray-600'
-                    }`}
-                  >
-                    {contact.naam}
-                  </button>
-                )
-              })}
+              {contacten.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => setKeuze({ type: 'contact', id: contact.id })}
+                  className={chipKlasse(isGekozen('contact', contact.id))}
+                >
+                  {contact.naam}
+                </button>
+              ))}
               <button
                 type="button"
                 onClick={() => setToonNieuwContact(true)}

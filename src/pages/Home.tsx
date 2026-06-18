@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { haalLokaleContacten } from '../services/lokaleContacten'
 import { haalSchuldpostenAlsSchuldeiser, type Schuldpost } from '../services/schuldposten'
 import { haalMijnGebruikersnaam } from '../services/gebruikers'
+import { haalVrienden } from '../services/vrienden'
 
 const formatEuro = (bedrag: number) => '€ ' + bedrag.toFixed(2).replace('.', ',')
 
@@ -12,7 +13,8 @@ const formatEuro = (bedrag: number) => '€ ' + bedrag.toFixed(2).replace('.', '
 const openstaand = (p: Schuldpost) =>
   p.status === 'betaald' || p.status === 'geweigerd' ? 0 : p.bedrag - p.gedekt_bedrag
 
-type Regel = { contactId: string; naam: string; bedrag: number }
+type Vriend = { gebruiker_id: string; gebruikersnaam: string }
+type Regel = { type: 'contact' | 'vriend'; id: string; naam: string; bedrag: number }
 
 export default function Home() {
   const { session } = useAuth()
@@ -23,28 +25,41 @@ export default function Home() {
   useEffect(() => {
     async function laad() {
       if (!session) return
-      const [{ data: contacten }, { data: posten }, { data: profiel }] = await Promise.all([
-        haalLokaleContacten(),
-        haalSchuldpostenAlsSchuldeiser(session.user.id),
-        haalMijnGebruikersnaam(),
-      ])
+      const [{ data: contacten }, { data: posten }, { data: profiel }, { data: vrienden }] =
+        await Promise.all([
+          haalLokaleContacten(),
+          haalSchuldpostenAlsSchuldeiser(session.user.id),
+          haalMijnGebruikersnaam(),
+          haalVrienden(),
+        ])
       setGebruikersnaam(profiel?.gebruikersnaam ?? null)
 
-      const naamPerId = new Map((contacten ?? []).map((c) => [c.id, c.naam]))
-      const bedragPerContact = new Map<string, number>()
+      const naamPerContact = new Map((contacten ?? []).map((c) => [c.id, c.naam]))
+      const naamPerVriend = new Map(((vrienden as Vriend[]) ?? []).map((v) => [v.gebruiker_id, v.gebruikersnaam]))
+
+      const groep = new Map<string, Regel>()
       for (const p of posten ?? []) {
-        if (!p.schuldenaar_contact_id) continue
-        const huidig = bedragPerContact.get(p.schuldenaar_contact_id) ?? 0
-        bedragPerContact.set(p.schuldenaar_contact_id, huidig + openstaand(p))
+        let regel: Omit<Regel, 'bedrag'> | null = null
+        if (p.schuldenaar_contact_id) {
+          regel = {
+            type: 'contact',
+            id: p.schuldenaar_contact_id,
+            naam: naamPerContact.get(p.schuldenaar_contact_id) ?? 'Onbekend',
+          }
+        } else if (p.schuldenaar_gebruiker_id) {
+          regel = {
+            type: 'vriend',
+            id: p.schuldenaar_gebruiker_id,
+            naam: naamPerVriend.get(p.schuldenaar_gebruiker_id) ?? 'Onbekend',
+          }
+        }
+        if (!regel) continue
+        const sleutel = `${regel.type}:${regel.id}`
+        const huidig = groep.get(sleutel)?.bedrag ?? 0
+        groep.set(sleutel, { ...regel, bedrag: huidig + openstaand(p) })
       }
 
-      const lijst: Regel[] = []
-      for (const [contactId, bedrag] of bedragPerContact) {
-        if (bedrag <= 0) continue
-        lijst.push({ contactId, naam: naamPerId.get(contactId) ?? 'Onbekend', bedrag })
-      }
-      lijst.sort((a, b) => b.bedrag - a.bedrag)
-
+      const lijst = [...groep.values()].filter((r) => r.bedrag > 0).sort((a, b) => b.bedrag - a.bedrag)
       setRegels(lijst)
       setLaden(false)
     }
@@ -86,9 +101,9 @@ export default function Home() {
         ) : (
           <ul className="space-y-2">
             {regels.map((regel) => (
-              <li key={regel.contactId}>
+              <li key={`${regel.type}:${regel.id}`}>
                 <Link
-                  to={`/contact/${regel.contactId}`}
+                  to={regel.type === 'contact' ? `/contact/${regel.id}` : `/vriend/${regel.id}`}
                   className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
                 >
                   <span className="text-sm font-medium">{regel.naam}</span>
@@ -110,6 +125,9 @@ export default function Home() {
           </Link>
           <Link to="/contacten" className="text-sm font-medium text-[#3B6D11] underline text-center">
             Lokale contacten beheren
+          </Link>
+          <Link to="/vrienden" className="text-sm font-medium text-[#3B6D11] underline text-center">
+            Vrienden
           </Link>
         </div>
       </div>

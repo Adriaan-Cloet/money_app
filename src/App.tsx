@@ -5,6 +5,8 @@ import Home from './pages/Home'
 import LokaleContacten from './pages/LokaleContacten'
 import NieuwePost from './pages/NieuwePost'
 import PersoonDetail from './pages/PersoonDetail'
+import Vrienden from './pages/Vrienden'
+import VriendDetail from './pages/VriendDetail'
 
 export default function App() {
   const { session, laden } = useAuth()
@@ -33,6 +35,14 @@ export default function App() {
       <Route
         path="/contact/:id"
         element={session ? <PersoonDetail /> : <Navigate to="/auth" replace />}
+      />
+      <Route
+        path="/vrienden"
+        element={session ? <Vrienden /> : <Navigate to="/auth" replace />}
+      />
+      <Route
+        path="/vriend/:id"
+        element={session ? <VriendDetail /> : <Navigate to="/auth" replace />}
       />
     </Routes>
   )
