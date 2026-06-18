@@ -3,6 +3,15 @@ import type { Tables, TablesInsert } from '../models/database.types'
 
 export type Schuldpost = Tables<'schuldposten'>
 
+// Alle posten waarvan jij de schuldeiser bent (mensen die jou nog geld moeten).
+export async function haalSchuldpostenAlsSchuldeiser(userId: string) {
+  return supabase
+    .from('schuldposten')
+    .select('*')
+    .eq('schuldeiser_id', userId)
+    .order('datum', { ascending: false })
+}
+
 // Een terugvraag tegen een lokaal contact (zelfbeheer door de eigenaar).
 // De echte-gebruiker-variant volgt zodra de discovery-flow beslist is.
 export async function maakSchuldpostVoorContact(params: {
