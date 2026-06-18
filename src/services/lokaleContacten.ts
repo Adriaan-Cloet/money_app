@@ -1,7 +1,15 @@
 import { supabase } from './supabase'
+import type { PostgrestError } from '@supabase/supabase-js'
 import type { Tables, TablesInsert } from '../models/database.types'
 
 export type LokaalContact = Tables<'lokale_contacten'>
+
+// Vertaalt databasefouten bij contacten naar nette NL-tekst.
+// 23505 = unieke-constraint geschonden (dubbele naam).
+export function lokaalContactFout(error: PostgrestError): string {
+  if (error.code === '23505') return 'Je hebt al een contact met die naam.'
+  return error.message
+}
 
 // RLS zorgt dat je enkel je eigen contacten terugkrijgt en wijzigt.
 export async function haalLokaleContacten() {

@@ -21,9 +21,7 @@ export default function Auth() {
     setBezig(true)
 
     const { error } =
-      modus === 'login'
-        ? await login(email, wachtwoord)
-        : await registreer(email, wachtwoord, naam)
+      modus === 'login' ? await login(email, wachtwoord) : await registreer(email, wachtwoord, naam)
 
     setBezig(false)
 
@@ -50,9 +48,7 @@ export default function Auth() {
             type="button"
             onClick={() => setModus('login')}
             className={`flex-1 py-2 text-sm ${
-              modus === 'login'
-                ? 'border-b-2 border-[#3B6D11] font-medium'
-                : 'text-gray-500'
+              modus === 'login' ? 'border-b-2 border-[#3B6D11] font-medium' : 'text-gray-500'
             }`}
           >
             Inloggen
@@ -61,9 +57,7 @@ export default function Auth() {
             type="button"
             onClick={() => setModus('registreer')}
             className={`flex-1 py-2 text-sm ${
-              modus === 'registreer'
-                ? 'border-b-2 border-[#3B6D11] font-medium'
-                : 'text-gray-500'
+              modus === 'registreer' ? 'border-b-2 border-[#3B6D11] font-medium' : 'text-gray-500'
             }`}
           >
             Registreren

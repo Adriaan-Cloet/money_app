@@ -7,6 +7,7 @@ import {
   maakLokaalContact,
   wijzigLokaalContact,
   verwijderLokaalContact,
+  lokaalContactFout,
   type LokaalContact,
 } from '../services/lokaleContacten'
 
@@ -22,7 +23,7 @@ export default function LokaleContacten() {
   async function laad() {
     setLaden(true)
     const { data, error } = await haalLokaleContacten()
-    if (error) setFout(error.message)
+    if (error) setFout(lokaalContactFout(error))
     else setContacten(data ?? [])
     setLaden(false)
   }
@@ -37,7 +38,7 @@ export default function LokaleContacten() {
     if (!naam || !session) return
     const { error } = await maakLokaalContact(naam, session.user.id)
     if (error) {
-      setFout(error.message)
+      setFout(lokaalContactFout(error))
       return
     }
     setNieuweNaam('')
@@ -49,7 +50,7 @@ export default function LokaleContacten() {
     if (!naam) return
     const { error } = await wijzigLokaalContact(id, naam)
     if (error) {
-      setFout(error.message)
+      setFout(lokaalContactFout(error))
       return
     }
     setBewerktId(null)
@@ -57,10 +58,11 @@ export default function LokaleContacten() {
   }
 
   async function verwijder(id: string) {
-    if (!confirm('Dit lokaal contact verwijderen?')) return
+    if (!confirm('Dit contact en al zijn terugvragen verwijderen? Dit kan niet ongedaan gemaakt worden.'))
+      return
     const { error } = await verwijderLokaalContact(id)
     if (error) {
-      setFout(error.message)
+      setFout(lokaalContactFout(error))
       return
     }
     laad()
@@ -119,10 +121,7 @@ export default function LokaleContacten() {
                     >
                       Bewaren
                     </button>
-                    <button
-                      onClick={() => setBewerktId(null)}
-                      className="text-gray-500 text-sm"
-                    >
+                    <button onClick={() => setBewerktId(null)} className="text-gray-500 text-sm">
                       Annuleren
                     </button>
                   </>
@@ -138,10 +137,7 @@ export default function LokaleContacten() {
                     >
                       Bewerken
                     </button>
-                    <button
-                      onClick={() => verwijder(contact.id)}
-                      className="text-red-600 text-sm"
-                    >
+                    <button onClick={() => verwijder(contact.id)} className="text-red-600 text-sm">
                       Verwijderen
                     </button>
                   </>

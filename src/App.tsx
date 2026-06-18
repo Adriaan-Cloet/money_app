@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
 import LokaleContacten from './pages/LokaleContacten'
+import NieuwePost from './pages/NieuwePost'
 
 export default function App() {
   const { session, laden } = useAuth()
@@ -23,6 +24,10 @@ export default function App() {
       <Route
         path="/contacten"
         element={session ? <LokaleContacten /> : <Navigate to="/auth" replace />}
+      />
+      <Route
+        path="/nieuw"
+        element={session ? <NieuwePost /> : <Navigate to="/auth" replace />}
       />
     </Routes>
   )

@@ -13,9 +13,12 @@ export default function Home() {
 
       <div className="mt-6 flex flex-col items-start gap-3">
         <Link
-          to="/contacten"
-          className="text-sm font-medium text-[#3B6D11] underline"
+          to="/nieuw"
+          className="bg-[#3B6D11] text-white rounded-lg px-4 py-2 text-sm font-medium"
         >
+          + Nieuwe terugvraag
+        </Link>
+        <Link to="/contacten" className="text-sm font-medium text-[#3B6D11] underline">
           Lokale contacten beheren
         </Link>
         <button
