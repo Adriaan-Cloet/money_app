@@ -7,7 +7,13 @@ export default function App() {
   const { session, laden } = useAuth()
 
   // Wacht tot we weten of er een sessie is, anders flikkert het scherm.
-  if (laden) return null
+  if (laden) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-500">Laden...</p>
+      </div>
+    )
+  }
 
   return (
     <Routes>
