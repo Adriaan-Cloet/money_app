@@ -7,6 +7,8 @@ import {
   haalSchuldpostenVoorGebruiker,
   haalSchuldpostenAlsSchuldenaar,
   weigerPost,
+  heropenPost,
+  verwijderPost,
   type Schuldpost,
 } from '../services/schuldposten'
 
@@ -46,6 +48,9 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
         </div>
         {actie}
       </div>
+      {post.heropening_uitleg && (
+        <p className="mt-1 text-xs text-gray-500">Heropend: {post.heropening_uitleg}</p>
+      )}
     </li>
   )
 }
@@ -82,6 +87,19 @@ export default function VriendDetail() {
     laad()
   }
 
+  async function heropen(postId: string) {
+    const uitleg = window.prompt('Waarom moet dit toch terugbetaald worden?')
+    if (!uitleg || !uitleg.trim()) return
+    await heropenPost(postId, uitleg.trim())
+    laad()
+  }
+
+  async function verwijder(postId: string) {
+    if (!window.confirm('Deze geweigerde post verwijderen?')) return
+    await verwijderPost(postId)
+    laad()
+  }
+
   const saldo =
     zijMoetenJou.reduce((s, p) => s + openstaand(p), 0) -
     jijMoetHen.reduce((s, p) => s + openstaand(p), 0)
@@ -115,7 +133,30 @@ export default function VriendDetail() {
             ) : (
               <ul className="space-y-2 mb-6">
                 {zijMoetenJou.map((post) => (
-                  <PostRegel key={post.id} post={post} />
+                  <PostRegel
+                    key={post.id}
+                    post={post}
+                    actie={
+                      post.status === 'geweigerd' ? (
+                        <div className="flex gap-3">
+                          {!post.heropend && (
+                            <button
+                              onClick={() => heropen(post.id)}
+                              className="text-sm text-[#3B6D11]"
+                            >
+                              Heropenen
+                            </button>
+                          )}
+                          <button
+                            onClick={() => verwijder(post.id)}
+                            className="text-sm text-red-600"
+                          >
+                            Verwijderen
+                          </button>
+                        </div>
+                      ) : undefined
+                    }
+                  />
                 ))}
               </ul>
             )}

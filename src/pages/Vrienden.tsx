@@ -161,11 +161,13 @@ export default function Vrienden() {
         ) : (
           <ul className="space-y-2">
             {vrienden.map((vriend) => (
-              <li
-                key={vriend.gebruiker_id}
-                className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium"
-              >
-                {vriend.gebruikersnaam}
+              <li key={vriend.gebruiker_id}>
+                <Link
+                  to={`/vriend/${vriend.gebruiker_id}`}
+                  className="block bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium"
+                >
+                  {vriend.gebruikersnaam}
+                </Link>
               </li>
             ))}
           </ul>
