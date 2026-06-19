@@ -240,6 +240,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      heropen_post: { Args: { p_post_id: string; p_uitleg: string }; Returns: undefined }
       inkomende_verzoeken: {
         Args: never
         Returns: {
@@ -257,6 +258,7 @@ export type Database = {
           gebruikersnaam: string
         }[]
       }
+      weiger_post: { Args: { p_post_id: string }; Returns: undefined }
       zoek_gebruiker: {
         Args: { p_naam: string }
         Returns: {

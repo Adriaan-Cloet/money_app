@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom'
 import { logout } from '../services/auth'
 import { useAuth } from '../context/AuthContext'
 import { haalLokaleContacten } from '../services/lokaleContacten'
-import { haalSchuldpostenAlsSchuldeiser, type Schuldpost } from '../services/schuldposten'
+import {
+  haalSchuldpostenAlsSchuldeiser,
+  haalSchuldpostenAlsSchuldenaar,
+  type Schuldpost,
+} from '../services/schuldposten'
 import { haalMijnGebruikersnaam } from '../services/gebruikers'
 import { haalVrienden } from '../services/vrienden'
 
-const formatEuro = (bedrag: number) => '€ ' + bedrag.toFixed(2).replace('.', ',')
+const formatEuro = (bedrag: number) => '€ ' + Math.abs(bedrag).toFixed(2).replace('.', ',')
 
 // Wat er nog openstaat op een post (betaald/geweigerd telt niet mee).
 const openstaand = (p: Schuldpost) =>
@@ -25,48 +29,57 @@ export default function Home() {
   useEffect(() => {
     async function laad() {
       if (!session) return
-      const [{ data: contacten }, { data: posten }, { data: profiel }, { data: vrienden }] =
-        await Promise.all([
-          haalLokaleContacten(),
-          haalSchuldpostenAlsSchuldeiser(session.user.id),
-          haalMijnGebruikersnaam(),
-          haalVrienden(),
-        ])
+      const mij = session.user.id
+      const [
+        { data: contacten },
+        { data: alsSchuldeiser },
+        { data: profiel },
+        { data: vrienden },
+        { data: alsSchuldenaar },
+      ] = await Promise.all([
+        haalLokaleContacten(),
+        haalSchuldpostenAlsSchuldeiser(mij),
+        haalMijnGebruikersnaam(),
+        haalVrienden(),
+        haalSchuldpostenAlsSchuldenaar(mij),
+      ])
       setGebruikersnaam(profiel?.gebruikersnaam ?? null)
 
       const naamPerContact = new Map((contacten ?? []).map((c) => [c.id, c.naam]))
-      const naamPerVriend = new Map(((vrienden as Vriend[]) ?? []).map((v) => [v.gebruiker_id, v.gebruikersnaam]))
+      const naamPerVriend = new Map(
+        ((vrienden as Vriend[]) ?? []).map((v) => [v.gebruiker_id, v.gebruikersnaam]),
+      )
 
-      const groep = new Map<string, Regel>()
-      for (const p of posten ?? []) {
-        let regel: Omit<Regel, 'bedrag'> | null = null
-        if (p.schuldenaar_contact_id) {
-          regel = {
-            type: 'contact',
-            id: p.schuldenaar_contact_id,
-            naam: naamPerContact.get(p.schuldenaar_contact_id) ?? 'Onbekend',
-          }
-        } else if (p.schuldenaar_gebruiker_id) {
-          regel = {
-            type: 'vriend',
-            id: p.schuldenaar_gebruiker_id,
-            naam: naamPerVriend.get(p.schuldenaar_gebruiker_id) ?? 'Onbekend',
-          }
-        }
-        if (!regel) continue
-        const sleutel = `${regel.type}:${regel.id}`
-        const huidig = groep.get(sleutel)?.bedrag ?? 0
-        groep.set(sleutel, { ...regel, bedrag: huidig + openstaand(p) })
+      // net > 0 = jij krijgt, net < 0 = jij moet
+      const net = new Map<string, Regel>()
+      const tel = (type: Regel['type'], id: string, naam: string, delta: number) => {
+        const sleutel = `${type}:${id}`
+        const huidig = net.get(sleutel)
+        net.set(sleutel, { type, id, naam, bedrag: (huidig?.bedrag ?? 0) + delta })
       }
 
-      const lijst = [...groep.values()].filter((r) => r.bedrag > 0).sort((a, b) => b.bedrag - a.bedrag)
+      for (const p of alsSchuldeiser ?? []) {
+        if (p.schuldenaar_contact_id) {
+          tel('contact', p.schuldenaar_contact_id, naamPerContact.get(p.schuldenaar_contact_id) ?? 'Onbekend', openstaand(p))
+        } else if (p.schuldenaar_gebruiker_id) {
+          tel('vriend', p.schuldenaar_gebruiker_id, naamPerVriend.get(p.schuldenaar_gebruiker_id) ?? 'Onbekend', openstaand(p))
+        }
+      }
+      for (const p of alsSchuldenaar ?? []) {
+        tel('vriend', p.schuldeiser_id, naamPerVriend.get(p.schuldeiser_id) ?? 'Onbekend', -openstaand(p))
+      }
+
+      const lijst = [...net.values()]
+        .filter((r) => Math.abs(r.bedrag) > 0.001)
+        .sort((a, b) => b.bedrag - a.bedrag)
       setRegels(lijst)
       setLaden(false)
     }
     laad()
   }, [session])
 
-  const totaalKrijgt = regels.reduce((som, r) => som + r.bedrag, 0)
+  const totaalKrijgt = regels.filter((r) => r.bedrag > 0).reduce((s, r) => s + r.bedrag, 0)
+  const totaalMoet = regels.filter((r) => r.bedrag < 0).reduce((s, r) => s - r.bedrag, 0)
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -88,7 +101,7 @@ export default function Home() {
           </div>
           <div className="bg-white border border-gray-200 rounded-xl p-4">
             <p className="text-xs text-gray-500">Jij moet</p>
-            <p className="text-2xl font-medium text-red-600 mt-1">{formatEuro(0)}</p>
+            <p className="text-2xl font-medium text-red-600 mt-1">{formatEuro(totaalMoet)}</p>
           </div>
         </div>
 
@@ -100,19 +113,25 @@ export default function Home() {
           <p className="text-sm text-gray-500">Nog niets openstaand. Voeg een terugvraag toe.</p>
         ) : (
           <ul className="space-y-2">
-            {regels.map((regel) => (
-              <li key={`${regel.type}:${regel.id}`}>
-                <Link
-                  to={regel.type === 'contact' ? `/contact/${regel.id}` : `/vriend/${regel.id}`}
-                  className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
-                >
-                  <span className="text-sm font-medium">{regel.naam}</span>
-                  <span className="text-sm font-medium text-[#3B6D11]">
-                    + {formatEuro(regel.bedrag)}
-                  </span>
-                </Link>
-              </li>
-            ))}
+            {regels.map((regel) => {
+              const krijgt = regel.bedrag > 0
+              return (
+                <li key={`${regel.type}:${regel.id}`}>
+                  <Link
+                    to={regel.type === 'contact' ? `/contact/${regel.id}` : `/vriend/${regel.id}`}
+                    className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
+                  >
+                    <span className="text-sm font-medium">{regel.naam}</span>
+                    <span
+                      className={`text-sm font-medium ${krijgt ? 'text-[#3B6D11]' : 'text-red-600'}`}
+                    >
+                      {krijgt ? '+ ' : '- '}
+                      {formatEuro(regel.bedrag)}
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         )}
 

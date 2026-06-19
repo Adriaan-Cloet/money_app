@@ -12,6 +12,30 @@ export async function haalSchuldpostenAlsSchuldeiser(userId: string) {
     .order('datum', { ascending: false })
 }
 
+// Alle posten waar jij de schuldenaar (echte gebruiker) bent (wat jij aan anderen moet).
+export async function haalSchuldpostenAlsSchuldenaar(userId: string) {
+  return supabase
+    .from('schuldposten')
+    .select('*')
+    .eq('schuldenaar_gebruiker_id', userId)
+    .order('datum', { ascending: false })
+}
+
+// De schuldenaar weigert een openstaande post (database-functie dwingt de regels af).
+export async function weigerPost(postId: string) {
+  return supabase.rpc('weiger_post', { p_post_id: postId })
+}
+
+// De schuldeiser heropent een geweigerde post (max 1x) met uitleg.
+export async function heropenPost(postId: string, uitleg: string) {
+  return supabase.rpc('heropen_post', { p_post_id: postId, p_uitleg: uitleg })
+}
+
+// De schuldeiser verwijdert een (geweigerde) post volledig.
+export async function verwijderPost(postId: string) {
+  return supabase.from('schuldposten').delete().eq('id', postId)
+}
+
 // Alle posten van 1 lokaal contact (RLS beperkt tot je eigen posten).
 export async function haalSchuldpostenVoorContact(contactId: string) {
   return supabase
