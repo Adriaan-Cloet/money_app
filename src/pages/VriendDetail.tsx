@@ -11,6 +11,14 @@ import {
   verwijderPost,
   type Schuldpost,
 } from '../services/schuldposten'
+import {
+  maakBetaling,
+  haalInkomendeBetalingen,
+  haalUitgaandeBetalingen,
+  bevestigBetaling,
+  zetBetalingStatus,
+  type Betaling,
+} from '../services/betalingen'
 
 const formatEuro = (b: number) => '€ ' + Math.abs(b).toFixed(2).replace('.', ',')
 const formatDatum = (d: string) => d.split('-').reverse().join('-')
@@ -25,10 +33,18 @@ const statusLabel: Record<string, string> = {
   geweigerd: 'Geweigerd',
 }
 
+const betalingLabel: Record<string, string> = {
+  gemeld: 'Gemeld',
+  bevestigd: 'Bevestigd',
+  wacht: 'In afwachting',
+  fout: 'Fout gemeld',
+}
+
 type Vriend = { gebruiker_id: string; gebruikersnaam: string }
 
 function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
   const afgehandeld = post.status === 'betaald' || post.status === 'geweigerd'
+  const rest = post.bedrag - post.gedekt_bedrag
   return (
     <li className="bg-white border border-gray-200 rounded-lg px-4 py-3">
       <div className="flex items-baseline justify-between">
@@ -45,6 +61,7 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
             {statusLabel[post.status] ?? post.status}
           </span>
           <span>{formatDatum(post.datum)}</span>
+          {post.status === 'deels_betaald' && <span>nog {formatEuro(rest)}</span>}
         </div>
         {actie}
       </div>
@@ -55,26 +72,45 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
   )
 }
 
+function BetalingRegel({ betaling, acties }: { betaling: Betaling; acties?: ReactNode }) {
+  return (
+    <li className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-medium">{formatEuro(betaling.bedrag)}</span>
+        <span className="text-xs text-gray-500">{betalingLabel[betaling.status] ?? betaling.status}</span>
+      </div>
+      {acties && <div className="mt-2 flex gap-3">{acties}</div>}
+    </li>
+  )
+}
+
 export default function VriendDetail() {
   const { id } = useParams()
   const { session } = useAuth()
   const [naam, setNaam] = useState<string | null>(null)
   const [zijMoetenJou, setZijMoetenJou] = useState<Schuldpost[]>([])
   const [jijMoetHen, setJijMoetHen] = useState<Schuldpost[]>([])
+  const [inkomend, setInkomend] = useState<Betaling[]>([])
+  const [uitgaand, setUitgaand] = useState<Betaling[]>([])
   const [laden, setLaden] = useState(true)
 
   async function laad() {
     if (!id || !session) return
     const mij = session.user.id
-    const [{ data: vrienden }, { data: teGoed }, { data: schuldenaarPosten }] = await Promise.all([
-      haalVrienden(),
-      haalSchuldpostenVoorGebruiker(mij, id),
-      haalSchuldpostenAlsSchuldenaar(mij),
-    ])
+    const [{ data: vrienden }, { data: teGoed }, { data: schuldenaarPosten }, { data: ink }, { data: uit }] =
+      await Promise.all([
+        haalVrienden(),
+        haalSchuldpostenVoorGebruiker(mij, id),
+        haalSchuldpostenAlsSchuldenaar(mij),
+        haalInkomendeBetalingen(mij, id),
+        haalUitgaandeBetalingen(mij, id),
+      ])
     const vriend = ((vrienden as Vriend[]) ?? []).find((v) => v.gebruiker_id === id)
     setNaam(vriend?.gebruikersnaam ?? 'Vriend')
     setZijMoetenJou(teGoed ?? [])
     setJijMoetHen((schuldenaarPosten ?? []).filter((p) => p.schuldeiser_id === id))
+    setInkomend(ink ?? [])
+    setUitgaand(uit ?? [])
     setLaden(false)
   }
 
@@ -100,9 +136,41 @@ export default function VriendDetail() {
     laad()
   }
 
+  async function betaal() {
+    if (!id || !session) return
+    const invoer = window.prompt('Hoeveel heb je betaald? (euro)')
+    if (!invoer) return
+    const bedrag = Number.parseFloat(invoer.replace(',', '.'))
+    if (!Number.isFinite(bedrag) || bedrag <= 0) {
+      window.alert('Vul een geldig bedrag in.')
+      return
+    }
+    await maakBetaling(session.user.id, id, bedrag)
+    laad()
+  }
+
+  async function bevestig(betalingId: string) {
+    await bevestigBetaling(betalingId)
+    laad()
+  }
+
+  async function zet(betalingId: string, status: 'wacht' | 'fout') {
+    await zetBetalingStatus(betalingId, status)
+    laad()
+  }
+
+  // Gemelde/wachtende betalingen tellen al voorlopig mee (enkel 'fout' niet).
+  const isPending = (b: Betaling) => b.status === 'gemeld' || b.status === 'wacht'
+  const pendingUit = uitgaand.filter(isPending).reduce((s, b) => s + b.bedrag, 0)
+  const pendingIn = inkomend.filter(isPending).reduce((s, b) => s + b.bedrag, 0)
+
   const saldo =
     zijMoetenJou.reduce((s, p) => s + openstaand(p), 0) -
-    jijMoetHen.reduce((s, p) => s + openstaand(p), 0)
+    jijMoetHen.reduce((s, p) => s + openstaand(p), 0) +
+    pendingUit -
+    pendingIn
+
+  const jijMoetIets = jijMoetHen.some((p) => openstaand(p) > 0)
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -129,9 +197,9 @@ export default function VriendDetail() {
 
             <p className="text-xs text-gray-400 mb-2">Zij moeten jou</p>
             {zijMoetenJou.length === 0 ? (
-              <p className="text-sm text-gray-500 mb-6">Niets.</p>
+              <p className="text-sm text-gray-500 mb-4">Niets.</p>
             ) : (
-              <ul className="space-y-2 mb-6">
+              <ul className="space-y-2 mb-4">
                 {zijMoetenJou.map((post) => (
                   <PostRegel
                     key={post.id}
@@ -140,17 +208,11 @@ export default function VriendDetail() {
                       post.status === 'geweigerd' ? (
                         <div className="flex gap-3">
                           {!post.heropend && (
-                            <button
-                              onClick={() => heropen(post.id)}
-                              className="text-sm text-[#3B6D11]"
-                            >
+                            <button onClick={() => heropen(post.id)} className="text-sm text-[#3B6D11]">
                               Heropenen
                             </button>
                           )}
-                          <button
-                            onClick={() => verwijder(post.id)}
-                            className="text-sm text-red-600"
-                          >
+                          <button onClick={() => verwijder(post.id)} className="text-sm text-red-600">
                             Verwijderen
                           </button>
                         </div>
@@ -161,21 +223,54 @@ export default function VriendDetail() {
               </ul>
             )}
 
-            <p className="text-xs text-gray-400 mb-2">Jij moet hen</p>
+            {inkomend.length > 0 && (
+              <div className="mb-6">
+                <p className="text-xs text-gray-400 mb-2">Gemelde betalingen van {naam}</p>
+                <ul className="space-y-2">
+                  {inkomend.map((betaling) => (
+                    <BetalingRegel
+                      key={betaling.id}
+                      betaling={betaling}
+                      acties={
+                        betaling.status === 'gemeld' ? (
+                          <>
+                            <button onClick={() => bevestig(betaling.id)} className="text-sm text-[#3B6D11]">
+                              Bevestigen
+                            </button>
+                            <button onClick={() => zet(betaling.id, 'wacht')} className="text-sm text-gray-500">
+                              Wachten
+                            </button>
+                            <button onClick={() => zet(betaling.id, 'fout')} className="text-sm text-red-600">
+                              Fout
+                            </button>
+                          </>
+                        ) : undefined
+                      }
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-gray-400">Jij moet hen</p>
+              {jijMoetIets && (
+                <button onClick={betaal} className="text-sm font-medium text-[#3B6D11]">
+                  Ik heb betaald
+                </button>
+              )}
+            </div>
             {jijMoetHen.length === 0 ? (
-              <p className="text-sm text-gray-500">Niets.</p>
+              <p className="text-sm text-gray-500 mb-4">Niets.</p>
             ) : (
-              <ul className="space-y-2">
+              <ul className="space-y-2 mb-4">
                 {jijMoetHen.map((post) => (
                   <PostRegel
                     key={post.id}
                     post={post}
                     actie={
                       post.status === 'open' ? (
-                        <button
-                          onClick={() => weiger(post.id)}
-                          className="text-sm text-red-600"
-                        >
+                        <button onClick={() => weiger(post.id)} className="text-sm text-red-600">
                           Weigeren
                         </button>
                       ) : undefined
@@ -183,6 +278,17 @@ export default function VriendDetail() {
                   />
                 ))}
               </ul>
+            )}
+
+            {uitgaand.length > 0 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Jouw gemelde betalingen</p>
+                <ul className="space-y-2">
+                  {uitgaand.map((betaling) => (
+                    <BetalingRegel key={betaling.id} betaling={betaling} />
+                  ))}
+                </ul>
+              </div>
             )}
           </>
         )}

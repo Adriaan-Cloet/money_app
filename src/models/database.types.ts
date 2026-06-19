@@ -240,6 +240,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bevestig_betaling: { Args: { p_betaling_id: string }; Returns: undefined }
       heropen_post: { Args: { p_post_id: string; p_uitleg: string }; Returns: undefined }
       inkomende_verzoeken: {
         Args: never

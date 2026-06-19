@@ -10,6 +10,7 @@ import {
 } from '../services/schuldposten'
 import { haalMijnGebruikersnaam } from '../services/gebruikers'
 import { haalVrienden } from '../services/vrienden'
+import { haalMijnBetalingen } from '../services/betalingen'
 
 const formatEuro = (bedrag: number) => '€ ' + Math.abs(bedrag).toFixed(2).replace('.', ',')
 
@@ -36,12 +37,14 @@ export default function Home() {
         { data: profiel },
         { data: vrienden },
         { data: alsSchuldenaar },
+        { data: betalingen },
       ] = await Promise.all([
         haalLokaleContacten(),
         haalSchuldpostenAlsSchuldeiser(mij),
         haalMijnGebruikersnaam(),
         haalVrienden(),
         haalSchuldpostenAlsSchuldenaar(mij),
+        haalMijnBetalingen(mij),
       ])
       setGebruikersnaam(profiel?.gebruikersnaam ?? null)
 
@@ -67,6 +70,16 @@ export default function Home() {
       }
       for (const p of alsSchuldenaar ?? []) {
         tel('vriend', p.schuldeiser_id, naamPerVriend.get(p.schuldeiser_id) ?? 'Onbekend', -openstaand(p))
+      }
+
+      // Gemelde/wachtende betalingen tellen al voorlopig mee (enkel 'fout' niet).
+      for (const b of betalingen ?? []) {
+        if (b.status !== 'gemeld' && b.status !== 'wacht') continue
+        if (b.betaler_gebruiker_id === mij) {
+          tel('vriend', b.ontvanger_id, naamPerVriend.get(b.ontvanger_id) ?? 'Onbekend', b.bedrag)
+        } else if (b.ontvanger_id === mij && b.betaler_gebruiker_id) {
+          tel('vriend', b.betaler_gebruiker_id, naamPerVriend.get(b.betaler_gebruiker_id) ?? 'Onbekend', -b.bedrag)
+        }
       }
 
       const lijst = [...net.values()]
