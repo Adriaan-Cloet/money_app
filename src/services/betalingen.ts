@@ -46,6 +46,11 @@ export async function bevestigBetaling(betalingId: string) {
   return supabase.rpc('bevestig_betaling', { p_betaling_id: betalingId })
 }
 
+// Eigenaar registreert zelf een betaling van een lokaal contact (auto-bevestigd + FIFO).
+export async function registreerContactbetaling(contactId: string, bedrag: number) {
+  return supabase.rpc('registreer_contactbetaling', { p_contact_id: contactId, p_bedrag: bedrag })
+}
+
 // Ontvanger zet een gemelde betaling op 'wacht' of 'fout' (RLS: enkel de ontvanger).
 export async function zetBetalingStatus(betalingId: string, status: 'wacht' | 'fout') {
   return supabase.from('betalingen').update({ status }).eq('id', betalingId)

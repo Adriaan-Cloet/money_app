@@ -252,6 +252,10 @@ export type Database = {
       }
       is_gebruikersnaam_vrij: { Args: { p_naam: string }; Returns: boolean }
       is_vriend: { Args: { p_ander: string }; Returns: boolean }
+      registreer_contactbetaling: {
+        Args: { p_contact_id: string; p_bedrag: number }
+        Returns: undefined
+      }
       vriendenlijst: {
         Args: never
         Returns: {
