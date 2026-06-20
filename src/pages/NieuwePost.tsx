@@ -112,7 +112,7 @@ export default function NieuwePost() {
     }`
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
       <div className="max-w-md mx-auto">
         <div className="relative flex items-center justify-center mb-5">
           <button onClick={() => navigate(-1)} className="absolute left-0 text-gray-500 text-sm">
@@ -130,7 +130,8 @@ export default function NieuwePost() {
               placeholder="0,00"
               value={bedrag}
               onChange={(e) => setBedrag(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-3 text-2xl font-medium text-[#3B6D11]"
+              style={{ fontSize: '1.5rem' }}
+              className="w-full border border-gray-300 rounded-lg px-3 py-3 font-medium text-[#3B6D11]"
             />
           </div>
 

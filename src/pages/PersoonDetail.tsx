@@ -99,7 +99,7 @@ export default function PersoonDetail() {
   const afgehandeld = posten.filter(isAfgehandeld)
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-5">
           <button onClick={() => navigate(-1)} className="text-gray-500 text-sm">

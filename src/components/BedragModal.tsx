@@ -41,7 +41,8 @@ export default function BedragModal({
         placeholder="0,00"
         value={waarde}
         onChange={(e) => setWaarde(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-3 text-xl font-medium text-[#3B6D11] mb-2"
+        style={{ fontSize: '1.25rem' }}
+        className="w-full border border-gray-300 rounded-lg px-3 py-3 font-medium text-[#3B6D11] mb-2"
       />
       {fout && <p className="text-sm text-red-600 mb-2">{fout}</p>}
       <div className="flex gap-2 mt-2">

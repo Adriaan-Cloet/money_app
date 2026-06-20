@@ -1,1 +1,9 @@
 @import 'tailwindcss';
+
+/* Voorkom dat iOS inzoomt wanneer je een invoerveld aantikt (vereist >= 16px).
+   Grote bedrag-velden zetten hun grootte zelf via een inline-stijl. */
+input,
+select,
+textarea {
+  font-size: 16px;
+}

@@ -60,7 +60,7 @@ function Tab({ to, naam }: { to: string; naam: string }) {
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200">
+    <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto flex items-center px-2">
         <Tab to="/" naam="home" />
         <Tab to="/vrienden" naam="vrienden" />

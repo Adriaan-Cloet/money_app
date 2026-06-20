@@ -56,7 +56,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-[calc(env(safe-area-inset-top)+1rem)]">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 p-6">
         <div className="text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-[#3B6D11] text-white text-2xl font-medium inline-flex items-center justify-center mb-3">
