@@ -22,17 +22,23 @@ export default function LokaleContacten() {
   const [bewerkNaam, setBewerkNaam] = useState('')
   const [teVerwijderen, setTeVerwijderen] = useState<LokaalContact | null>(null)
 
-  async function laad() {
-    setLaden(true)
-    const { data, error } = await haalLokaleContacten()
-    if (error) setFout(lokaalContactFout(error))
-    else setContacten(data ?? [])
-    setLaden(false)
-  }
+  const [versie, setVersie] = useState(0)
+  const herlaad = () => setVersie((v) => v + 1)
 
   useEffect(() => {
+    let actief = true
+    async function laad() {
+      const { data, error } = await haalLokaleContacten()
+      if (!actief) return
+      if (error) setFout(lokaalContactFout(error))
+      else setContacten(data ?? [])
+      setLaden(false)
+    }
     laad()
-  }, [])
+    return () => {
+      actief = false
+    }
+  }, [versie])
 
   async function voegToe(e: FormEvent) {
     e.preventDefault()
@@ -44,7 +50,7 @@ export default function LokaleContacten() {
       return
     }
     setNieuweNaam('')
-    laad()
+    herlaad()
   }
 
   async function bewaarBewerking(id: string) {
@@ -56,7 +62,7 @@ export default function LokaleContacten() {
       return
     }
     setBewerktId(null)
-    laad()
+    herlaad()
   }
 
   async function verwijder() {
@@ -67,7 +73,7 @@ export default function LokaleContacten() {
       setFout(lokaalContactFout(error))
       return
     }
-    laad()
+    herlaad()
   }
 
   return (

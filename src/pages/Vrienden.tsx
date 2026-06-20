@@ -27,18 +27,25 @@ export default function Vrienden() {
   const [vrienden, setVrienden] = useState<Vriend[]>([])
   const [teVerwijderenVriend, setTeVerwijderenVriend] = useState<Vriend | null>(null)
 
-  async function laad() {
-    const [{ data: v }, { data: vr }] = await Promise.all([
-      haalInkomendeVerzoeken(),
-      haalVrienden(),
-    ])
-    setVerzoeken((v as Verzoek[]) ?? [])
-    setVrienden((vr as Vriend[]) ?? [])
-  }
+  const [versie, setVersie] = useState(0)
+  const herlaad = () => setVersie((v) => v + 1)
 
   useEffect(() => {
+    let actief = true
+    async function laad() {
+      const [{ data: v }, { data: vr }] = await Promise.all([
+        haalInkomendeVerzoeken(),
+        haalVrienden(),
+      ])
+      if (!actief) return
+      setVerzoeken((v as Verzoek[]) ?? [])
+      setVrienden((vr as Vriend[]) ?? [])
+    }
     laad()
-  }, [])
+    return () => {
+      actief = false
+    }
+  }, [versie])
 
   async function zoek(e: FormEvent) {
     e.preventDefault()
@@ -74,24 +81,24 @@ export default function Vrienden() {
     setResultaat(null)
     setZoekterm('')
     setMelding('Verzoek verstuurd.')
-    laad()
+    herlaad()
   }
 
   async function aanvaard(vriendschapId: string) {
     await aanvaardVerzoek(vriendschapId)
-    laad()
+    herlaad()
   }
 
   async function weiger(vriendschapId: string) {
     await verwijderVriendschap(vriendschapId)
-    laad()
+    herlaad()
   }
 
   async function ontvriend() {
     if (!teVerwijderenVriend) return
     await verwijderVriendschap(teVerwijderenVriend.vriendschap_id)
     setTeVerwijderenVriend(null)
-    laad()
+    herlaad()
   }
 
   return (

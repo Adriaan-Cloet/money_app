@@ -56,26 +56,34 @@ export default function PersoonDetail() {
   const [betaalOpen, setBetaalOpen] = useState(false)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
 
-  async function laad() {
-    if (!id) return
-    const [{ data: c }, { data: p }] = await Promise.all([
-      haalLokaalContact(id),
-      haalSchuldpostenVoorContact(id),
-    ])
-    setContact(c)
-    setPosten(p ?? [])
-    setLaden(false)
-  }
+  const [versie, setVersie] = useState(0)
+  const herlaad = () => setVersie((v) => v + 1)
 
   useEffect(() => {
+    if (!id) return
+    let actief = true
+    const contactId = id
+    async function laad() {
+      const [{ data: c }, { data: p }] = await Promise.all([
+        haalLokaalContact(contactId),
+        haalSchuldpostenVoorContact(contactId),
+      ])
+      if (!actief) return
+      setContact(c)
+      setPosten(p ?? [])
+      setLaden(false)
+    }
     laad()
-  }, [id])
+    return () => {
+      actief = false
+    }
+  }, [id, versie])
 
   async function onBetaal(bedrag: number) {
     if (!id) return
     setBetaalOpen(false)
     await registreerContactbetaling(id, bedrag)
-    laad()
+    herlaad()
   }
 
   async function onVerwijder() {
@@ -83,7 +91,7 @@ export default function PersoonDetail() {
     const postId = teVerwijderen.id
     setTeVerwijderen(null)
     await verwijderPost(postId)
-    laad()
+    herlaad()
   }
 
   const saldo = posten.reduce((s, p) => s + openstaand(p), 0)

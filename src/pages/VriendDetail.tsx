@@ -82,38 +82,45 @@ export default function VriendDetail() {
   const [inkomend, setInkomend] = useState<Betaling[]>([])
   const [uitgaand, setUitgaand] = useState<Betaling[]>([])
   const [laden, setLaden] = useState(true)
+  const [versie, setVersie] = useState(0)
+  const herlaad = () => setVersie((v) => v + 1)
 
   const [betaalOpen, setBetaalOpen] = useState(false)
   const [heropenId, setHeropenId] = useState<string | null>(null)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
 
-  async function laad() {
-    if (!id || !session) return
-    const mij = session.user.id
-    const [{ data: vrienden }, { data: teGoed }, { data: schuldenaarPosten }, { data: ink }, { data: uit }] =
-      await Promise.all([
-        haalVrienden(),
-        haalSchuldpostenVoorGebruiker(mij, id),
-        haalSchuldpostenAlsSchuldenaar(mij),
-        haalInkomendeBetalingen(mij, id),
-        haalUitgaandeBetalingen(mij, id),
-      ])
-    const vriend = ((vrienden as Vriend[]) ?? []).find((v) => v.gebruiker_id === id)
-    setNaam(vriend?.gebruikersnaam ?? 'Vriend')
-    setZijMoetenJou(teGoed ?? [])
-    setJijMoetHen((schuldenaarPosten ?? []).filter((p) => p.schuldeiser_id === id))
-    setInkomend(ink ?? [])
-    setUitgaand(uit ?? [])
-    setLaden(false)
-  }
-
   useEffect(() => {
+    if (!id || !session) return
+    let actief = true
+    const mij = session.user.id
+    const vriendId = id
+    async function laad() {
+      const [{ data: vrienden }, { data: teGoed }, { data: schuldenaarPosten }, { data: ink }, { data: uit }] =
+        await Promise.all([
+          haalVrienden(),
+          haalSchuldpostenVoorGebruiker(mij, vriendId),
+          haalSchuldpostenAlsSchuldenaar(mij),
+          haalInkomendeBetalingen(mij, vriendId),
+          haalUitgaandeBetalingen(mij, vriendId),
+        ])
+      if (!actief) return
+      const vriend = ((vrienden as Vriend[]) ?? []).find((v) => v.gebruiker_id === vriendId)
+      setNaam(vriend?.gebruikersnaam ?? 'Vriend')
+      setZijMoetenJou(teGoed ?? [])
+      setJijMoetHen((schuldenaarPosten ?? []).filter((p) => p.schuldeiser_id === vriendId))
+      setInkomend(ink ?? [])
+      setUitgaand(uit ?? [])
+      setLaden(false)
+    }
     laad()
-  }, [id, session])
+    return () => {
+      actief = false
+    }
+  }, [id, session, versie])
 
   async function weiger(postId: string) {
     await weigerPost(postId)
-    laad()
+    herlaad()
   }
 
   async function onHeropen(uitleg: string) {
@@ -121,7 +128,7 @@ export default function VriendDetail() {
     const postId = heropenId
     setHeropenId(null)
     await heropenPost(postId, uitleg)
-    laad()
+    herlaad()
   }
 
   async function onVerwijder() {
@@ -129,24 +136,24 @@ export default function VriendDetail() {
     const postId = teVerwijderen.id
     setTeVerwijderen(null)
     await verwijderPost(postId)
-    laad()
+    herlaad()
   }
 
   async function onBetaal(bedrag: number) {
     if (!id || !session) return
     setBetaalOpen(false)
     await maakBetaling(session.user.id, id, bedrag)
-    laad()
+    herlaad()
   }
 
   async function bevestig(betalingId: string) {
     await bevestigBetaling(betalingId)
-    laad()
+    herlaad()
   }
 
   async function zet(betalingId: string, status: 'wacht' | 'fout') {
     await zetBetalingStatus(betalingId, status)
-    laad()
+    herlaad()
   }
 
   const isPending = (b: Betaling) => b.status === 'gemeld' || b.status === 'wacht'
