@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { haalVrienden } from '../services/vrienden'
 import {
@@ -19,6 +19,10 @@ import {
   zetBetalingStatus,
   type Betaling,
 } from '../services/betalingen'
+import StatusPill from '../components/StatusPill'
+import BedragModal from '../components/BedragModal'
+import TekstModal from '../components/TekstModal'
+import BevestigModal from '../components/BevestigModal'
 
 const formatEuro = (b: number) => '€ ' + Math.abs(b).toFixed(2).replace('.', ',')
 const formatDatum = (d: string) => d.split('-').reverse().join('-')
@@ -26,27 +30,13 @@ const formatDatum = (d: string) => d.split('-').reverse().join('-')
 const openstaand = (p: Schuldpost) =>
   p.status === 'betaald' || p.status === 'geweigerd' ? 0 : p.bedrag - p.gedekt_bedrag
 
-const statusLabel: Record<string, string> = {
-  open: 'Open',
-  deels_betaald: 'Deels betaald',
-  betaald: 'Betaald',
-  geweigerd: 'Geweigerd',
-}
-
-const betalingLabel: Record<string, string> = {
-  gemeld: 'Gemeld',
-  bevestigd: 'Bevestigd',
-  wacht: 'In afwachting',
-  fout: 'Fout gemeld',
-}
-
 type Vriend = { gebruiker_id: string; gebruikersnaam: string }
 
 function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
   const afgehandeld = post.status === 'betaald' || post.status === 'geweigerd'
   const rest = post.bedrag - post.gedekt_bedrag
   return (
-    <li className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+    <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
       <div className="flex items-baseline justify-between">
         <span className={`text-sm font-medium ${afgehandeld ? 'text-gray-400 line-through' : ''}`}>
           {post.omschrijving || 'Geen omschrijving'}
@@ -55,18 +45,16 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
           {formatEuro(post.bedrag)}
         </span>
       </div>
-      <div className="mt-1 flex items-center justify-between">
+      <div className="mt-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span className="rounded bg-gray-100 px-2 py-0.5 text-gray-600">
-            {statusLabel[post.status] ?? post.status}
-          </span>
+          <StatusPill status={post.status} />
           <span>{formatDatum(post.datum)}</span>
           {post.status === 'deels_betaald' && <span>nog {formatEuro(rest)}</span>}
         </div>
         {actie}
       </div>
       {post.heropening_uitleg && (
-        <p className="mt-1 text-xs text-gray-500">Heropend: {post.heropening_uitleg}</p>
+        <p className="mt-2 text-xs text-gray-500">Heropend: {post.heropening_uitleg}</p>
       )}
     </li>
   )
@@ -74,10 +62,10 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
 
 function BetalingRegel({ betaling, acties }: { betaling: Betaling; acties?: ReactNode }) {
   return (
-    <li className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-      <div className="flex items-baseline justify-between">
+    <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
+      <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{formatEuro(betaling.bedrag)}</span>
-        <span className="text-xs text-gray-500">{betalingLabel[betaling.status] ?? betaling.status}</span>
+        <StatusPill status={betaling.status} />
       </div>
       {acties && <div className="mt-2 flex gap-3">{acties}</div>}
     </li>
@@ -86,6 +74,7 @@ function BetalingRegel({ betaling, acties }: { betaling: Betaling; acties?: Reac
 
 export default function VriendDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { session } = useAuth()
   const [naam, setNaam] = useState<string | null>(null)
   const [zijMoetenJou, setZijMoetenJou] = useState<Schuldpost[]>([])
@@ -93,6 +82,10 @@ export default function VriendDetail() {
   const [inkomend, setInkomend] = useState<Betaling[]>([])
   const [uitgaand, setUitgaand] = useState<Betaling[]>([])
   const [laden, setLaden] = useState(true)
+
+  const [betaalOpen, setBetaalOpen] = useState(false)
+  const [heropenId, setHeropenId] = useState<string | null>(null)
+  const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
 
   async function laad() {
     if (!id || !session) return
@@ -123,28 +116,25 @@ export default function VriendDetail() {
     laad()
   }
 
-  async function heropen(postId: string) {
-    const uitleg = window.prompt('Waarom moet dit toch terugbetaald worden?')
-    if (!uitleg || !uitleg.trim()) return
-    await heropenPost(postId, uitleg.trim())
+  async function onHeropen(uitleg: string) {
+    if (!heropenId) return
+    const postId = heropenId
+    setHeropenId(null)
+    await heropenPost(postId, uitleg)
     laad()
   }
 
-  async function verwijder(postId: string) {
-    if (!window.confirm('Deze geweigerde post verwijderen?')) return
+  async function onVerwijder() {
+    if (!teVerwijderen) return
+    const postId = teVerwijderen.id
+    setTeVerwijderen(null)
     await verwijderPost(postId)
     laad()
   }
 
-  async function betaal() {
+  async function onBetaal(bedrag: number) {
     if (!id || !session) return
-    const invoer = window.prompt('Hoeveel heb je betaald? (euro)')
-    if (!invoer) return
-    const bedrag = Number.parseFloat(invoer.replace(',', '.'))
-    if (!Number.isFinite(bedrag) || bedrag <= 0) {
-      window.alert('Vul een geldig bedrag in.')
-      return
-    }
+    setBetaalOpen(false)
     await maakBetaling(session.user.id, id, bedrag)
     laad()
   }
@@ -159,11 +149,9 @@ export default function VriendDetail() {
     laad()
   }
 
-  // Gemelde/wachtende betalingen tellen al voorlopig mee (enkel 'fout' niet).
   const isPending = (b: Betaling) => b.status === 'gemeld' || b.status === 'wacht'
   const pendingUit = uitgaand.filter(isPending).reduce((s, b) => s + b.bedrag, 0)
   const pendingIn = inkomend.filter(isPending).reduce((s, b) => s + b.bedrag, 0)
-
   const saldo =
     zijMoetenJou.reduce((s, p) => s + openstaand(p), 0) -
     jijMoetHen.reduce((s, p) => s + openstaand(p), 0) +
@@ -176,9 +164,9 @@ export default function VriendDetail() {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-5">
-          <Link to="/" className="text-gray-500 text-sm">
+          <button onClick={() => navigate(-1)} className="text-gray-500 text-sm">
             &larr; Terug
-          </Link>
+          </button>
           <h1 className="text-xl font-medium text-[#3B6D11]">{naam ?? 'Vriend'}</h1>
         </div>
 
@@ -186,16 +174,14 @@ export default function VriendDetail() {
           <p className="text-sm text-gray-500">Laden...</p>
         ) : (
           <>
-            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 text-center">
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 text-center">
               <p className="text-xs text-gray-500">Saldo met {naam}</p>
-              <p
-                className={`text-2xl font-medium mt-1 ${saldo < 0 ? 'text-red-600' : 'text-[#3B6D11]'}`}
-              >
+              <p className={`text-2xl font-medium mt-1 ${saldo < 0 ? 'text-red-600' : 'text-[#3B6D11]'}`}>
                 {saldo < 0 ? 'Jij moet' : 'Jij krijgt'} {formatEuro(saldo)}
               </p>
             </div>
 
-            <p className="text-xs text-gray-400 mb-2">Zij moeten jou</p>
+            <p className="text-xs font-medium text-gray-400 mb-2">Zij moeten jou</p>
             {zijMoetenJou.length === 0 ? (
               <p className="text-sm text-gray-500 mb-4">Niets.</p>
             ) : (
@@ -208,11 +194,11 @@ export default function VriendDetail() {
                       post.status === 'geweigerd' ? (
                         <div className="flex gap-3">
                           {!post.heropend && (
-                            <button onClick={() => heropen(post.id)} className="text-sm text-[#3B6D11]">
+                            <button onClick={() => setHeropenId(post.id)} className="text-sm text-[#3B6D11]">
                               Heropenen
                             </button>
                           )}
-                          <button onClick={() => verwijder(post.id)} className="text-sm text-red-600">
+                          <button onClick={() => setTeVerwijderen(post)} className="text-sm text-red-600">
                             Verwijderen
                           </button>
                         </div>
@@ -225,7 +211,7 @@ export default function VriendDetail() {
 
             {inkomend.length > 0 && (
               <div className="mb-6">
-                <p className="text-xs text-gray-400 mb-2">Gemelde betalingen van {naam}</p>
+                <p className="text-xs font-medium text-gray-400 mb-2">Gemelde betalingen van {naam}</p>
                 <ul className="space-y-2">
                   {inkomend.map((betaling) => (
                     <BetalingRegel
@@ -253,9 +239,9 @@ export default function VriendDetail() {
             )}
 
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-gray-400">Jij moet hen</p>
+              <p className="text-xs font-medium text-gray-400">Jij moet hen</p>
               {jijMoetIets && (
-                <button onClick={betaal} className="text-sm font-medium text-[#3B6D11]">
+                <button onClick={() => setBetaalOpen(true)} className="text-sm font-medium text-[#3B6D11]">
                   Ik heb betaald
                 </button>
               )}
@@ -282,7 +268,7 @@ export default function VriendDetail() {
 
             {uitgaand.length > 0 && (
               <div>
-                <p className="text-xs text-gray-400 mb-2">Jouw gemelde betalingen</p>
+                <p className="text-xs font-medium text-gray-400 mb-2">Jouw gemelde betalingen</p>
                 <ul className="space-y-2">
                   {uitgaand.map((betaling) => (
                     <BetalingRegel key={betaling.id} betaling={betaling} />
@@ -293,6 +279,27 @@ export default function VriendDetail() {
           </>
         )}
       </div>
+
+      <BedragModal
+        open={betaalOpen}
+        titel={`Betaling aan ${naam ?? 'vriend'}`}
+        onBevestig={onBetaal}
+        onClose={() => setBetaalOpen(false)}
+      />
+      <TekstModal
+        open={heropenId !== null}
+        titel="Post heropenen"
+        placeholder="Waarom moet dit toch terugbetaald worden?"
+        onBevestig={onHeropen}
+        onClose={() => setHeropenId(null)}
+      />
+      <BevestigModal
+        open={teVerwijderen !== null}
+        titel="Post verwijderen?"
+        tekst="Deze geweigerde post wordt definitief verwijderd."
+        onBevestig={onVerwijder}
+        onClose={() => setTeVerwijderen(null)}
+      />
     </div>
   )
 }

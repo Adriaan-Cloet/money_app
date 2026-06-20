@@ -10,10 +10,12 @@ import {
   aanvaardVerzoek,
   verwijderVriendschap,
 } from '../services/vrienden'
+import Avatar from '../components/Avatar'
+import BevestigModal from '../components/BevestigModal'
 
 type Gevonden = { id: string; gebruikersnaam: string }
 type Verzoek = { vriendschap_id: string; verzoeker_id: string; gebruikersnaam: string }
-type Vriend = { gebruiker_id: string; gebruikersnaam: string }
+type Vriend = { gebruiker_id: string; gebruikersnaam: string; vriendschap_id: string }
 
 export default function Vrienden() {
   const { session } = useAuth()
@@ -23,6 +25,7 @@ export default function Vrienden() {
   const [melding, setMelding] = useState<string | null>(null)
   const [verzoeken, setVerzoeken] = useState<Verzoek[]>([])
   const [vrienden, setVrienden] = useState<Vriend[]>([])
+  const [teVerwijderenVriend, setTeVerwijderenVriend] = useState<Vriend | null>(null)
 
   async function laad() {
     const [{ data: v }, { data: vr }] = await Promise.all([
@@ -84,95 +87,113 @@ export default function Vrienden() {
     laad()
   }
 
+  async function ontvriend() {
+    if (!teVerwijderenVriend) return
+    await verwijderVriendschap(teVerwijderenVriend.vriendschap_id)
+    setTeVerwijderenVriend(null)
+    laad()
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center gap-3 mb-5">
-          <Link to="/" className="text-gray-500 text-sm">
-            &larr; Terug
-          </Link>
-          <h1 className="text-xl font-medium text-[#3B6D11]">Vrienden</h1>
-        </div>
+    <div>
+      <h1 className="text-2xl font-medium text-gray-900 mb-5">Vrienden</h1>
 
-        <form onSubmit={zoek} className="flex gap-2 mb-2">
-          <input
-            type="text"
-            placeholder="Zoek op gebruikersnaam"
-            value={zoekterm}
-            onChange={(e) => setZoekterm(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-          />
+      <form onSubmit={zoek} className="flex gap-2 mb-2">
+        <input
+          type="text"
+          placeholder="Zoek op gebruikersnaam"
+          value={zoekterm}
+          onChange={(e) => setZoekterm(e.target.value)}
+          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+        />
+        <button
+          type="submit"
+          className="bg-[#3B6D11] text-white rounded-lg px-4 py-2.5 text-sm font-medium"
+        >
+          Zoek
+        </button>
+      </form>
+
+      {zoekMelding && <p className="text-sm text-gray-500 mb-3">{zoekMelding}</p>}
+      {melding && <p className="text-sm text-[#3B6D11] mb-3">{melding}</p>}
+
+      {resultaat && (
+        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4">
+          <Avatar naam={resultaat.gebruikersnaam} />
+          <span className="flex-1 text-sm font-medium">{resultaat.gebruikersnaam}</span>
           <button
-            type="submit"
-            className="bg-[#3B6D11] text-white rounded-lg px-4 py-2.5 text-sm font-medium"
+            onClick={voegToe}
+            className="bg-[#3B6D11] text-white rounded-lg px-3 py-1.5 text-sm font-medium"
           >
-            Zoek
+            Verzoek sturen
           </button>
-        </form>
+        </div>
+      )}
 
-        {zoekMelding && <p className="text-sm text-gray-500 mb-3">{zoekMelding}</p>}
-        {melding && <p className="text-sm text-[#3B6D11] mb-3">{melding}</p>}
-
-        {resultaat && (
-          <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 mb-4">
-            <span className="text-sm font-medium">{resultaat.gebruikersnaam}</span>
-            <button
-              onClick={voegToe}
-              className="bg-[#3B6D11] text-white rounded-lg px-3 py-1.5 text-sm font-medium"
-            >
-              Verzoek sturen
-            </button>
-          </div>
-        )}
-
-        {verzoeken.length > 0 && (
-          <div className="mb-6">
-            <p className="text-xs text-gray-400 mb-2">Inkomende verzoeken</p>
-            <ul className="space-y-2">
-              {verzoeken.map((verzoek) => (
-                <li
-                  key={verzoek.vriendschap_id}
-                  className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3"
-                >
-                  <span className="text-sm font-medium">{verzoek.gebruikersnaam}</span>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => aanvaard(verzoek.vriendschap_id)}
-                      className="text-[#3B6D11] text-sm font-medium"
-                    >
-                      Accepteren
-                    </button>
-                    <button
-                      onClick={() => weiger(verzoek.vriendschap_id)}
-                      className="text-gray-500 text-sm"
-                    >
-                      Weigeren
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <p className="text-xs text-gray-400 mb-2">Mijn vrienden</p>
-        {vrienden.length === 0 ? (
-          <p className="text-sm text-gray-500">Nog geen vrienden.</p>
-        ) : (
+      {verzoeken.length > 0 && (
+        <div className="mb-6">
+          <p className="text-xs font-medium text-gray-400 mb-2">Inkomende verzoeken</p>
           <ul className="space-y-2">
-            {vrienden.map((vriend) => (
-              <li key={vriend.gebruiker_id}>
-                <Link
-                  to={`/vriend/${vriend.gebruiker_id}`}
-                  className="block bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm font-medium"
+            {verzoeken.map((verzoek) => (
+              <li
+                key={verzoek.vriendschap_id}
+                className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
+              >
+                <Avatar naam={verzoek.gebruikersnaam} />
+                <span className="flex-1 text-sm font-medium">{verzoek.gebruikersnaam}</span>
+                <button
+                  onClick={() => aanvaard(verzoek.vriendschap_id)}
+                  className="text-[#3B6D11] text-sm font-medium"
                 >
-                  {vriend.gebruikersnaam}
-                </Link>
+                  Accepteren
+                </button>
+                <button
+                  onClick={() => weiger(verzoek.vriendschap_id)}
+                  className="text-gray-400 text-sm"
+                >
+                  Weigeren
+                </button>
               </li>
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
+
+      <p className="text-xs font-medium text-gray-400 mb-2">Mijn vrienden</p>
+      {vrienden.length === 0 ? (
+        <p className="text-sm text-gray-500">Nog geen vrienden.</p>
+      ) : (
+        <ul className="space-y-2">
+          {vrienden.map((vriend) => (
+            <li
+              key={vriend.gebruiker_id}
+              className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            >
+              <Link
+                to={`/vriend/${vriend.gebruiker_id}`}
+                className="flex items-center gap-3 flex-1 min-w-0"
+              >
+                <Avatar naam={vriend.gebruikersnaam} />
+                <span className="text-sm font-medium truncate">{vriend.gebruikersnaam}</span>
+              </Link>
+              <button
+                onClick={() => setTeVerwijderenVriend(vriend)}
+                className="text-gray-400 text-sm shrink-0"
+              >
+                Verwijderen
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <BevestigModal
+        open={teVerwijderenVriend !== null}
+        titel="Vriend verwijderen?"
+        tekst={`${teVerwijderenVriend?.gebruikersnaam ?? 'Deze vriend'} wordt uit je vrienden verwijderd.`}
+        onBevestig={ontvriend}
+        onClose={() => setTeVerwijderenVriend(null)}
+      />
     </div>
   )
 }

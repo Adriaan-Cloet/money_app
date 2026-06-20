@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   haalLokaleContacten,
@@ -114,10 +114,10 @@ export default function NieuwePost() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-md mx-auto">
-        <div className="flex items-center gap-3 mb-5">
-          <Link to="/" className="text-gray-500 text-sm">
+        <div className="relative flex items-center justify-center mb-5">
+          <button onClick={() => navigate(-1)} className="absolute left-0 text-gray-500 text-sm">
             &larr; Terug
-          </Link>
+          </button>
           <h1 className="text-xl font-medium text-[#3B6D11]">Nieuwe terugvraag</h1>
         </div>
 

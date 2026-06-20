@@ -261,6 +261,7 @@ export type Database = {
         Returns: {
           gebruiker_id: string
           gebruikersnaam: string
+          vriendschap_id: string
         }[]
       }
       weiger_post: { Args: { p_post_id: string }; Returns: undefined }
