@@ -9,6 +9,7 @@ import {
   haalVrienden,
   aanvaardVerzoek,
   verwijderVriendschap,
+  ontvriend as ontvriendRpc,
 } from '../services/vrienden'
 import Avatar from '../components/Avatar'
 import BevestigModal from '../components/BevestigModal'
@@ -96,7 +97,7 @@ export default function Vrienden() {
 
   async function ontvriend() {
     if (!teVerwijderenVriend) return
-    await verwijderVriendschap(teVerwijderenVriend.vriendschap_id)
+    await ontvriendRpc(teVerwijderenVriend.vriendschap_id)
     setTeVerwijderenVriend(null)
     herlaad()
   }
@@ -197,7 +198,7 @@ export default function Vrienden() {
       <BevestigModal
         open={teVerwijderenVriend !== null}
         titel="Vriend verwijderen?"
-        tekst={`${teVerwijderenVriend?.gebruikersnaam ?? 'Deze vriend'} wordt uit je vrienden verwijderd.`}
+        tekst={`${teVerwijderenVriend?.gebruikersnaam ?? 'Deze vriend'} wordt verwijderd. Alle terugvragen en betalingen tussen jullie worden ook definitief gewist.`}
         onBevestig={ontvriend}
         onClose={() => setTeVerwijderenVriend(null)}
       />

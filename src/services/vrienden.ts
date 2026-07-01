@@ -23,7 +23,15 @@ export async function aanvaardVerzoek(vriendschapId: string) {
   return supabase.from('vriendschappen').update({ status: 'aanvaard' }).eq('id', vriendschapId)
 }
 
-// Voor weigeren van een verzoek (of later ontvrienden).
+// Voor weigeren van een (nog niet aanvaard) verzoek: gewoon de rij weg.
+// Er zijn dan nog geen transacties, dus een simpele delete volstaat.
 export async function verwijderVriendschap(vriendschapId: string) {
   return supabase.from('vriendschappen').delete().eq('id', vriendschapId)
+}
+
+// Ontvrienden van een bestaande vriend: wist eerst alle schuldposten en
+// betalingen tussen jullie en dan de vriendschap. Via een security-definer
+// RPC, want door RLS mag je de posten van de tegenpartij niet zelf verwijderen.
+export async function ontvriend(vriendschapId: string) {
+  return supabase.rpc('ontvriend', { p_vriendschap_id: vriendschapId })
 }
