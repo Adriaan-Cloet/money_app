@@ -17,6 +17,7 @@ import {
   haalUitgaandeBetalingen,
   bevestigBetaling,
   zetBetalingStatus,
+  registreerVriendbetaling,
   type Betaling,
 } from '../services/betalingen'
 import StatusPill from '../components/StatusPill'
@@ -86,6 +87,7 @@ export default function VriendDetail() {
   const herlaad = () => setVersie((v) => v + 1)
 
   const [betaalOpen, setBetaalOpen] = useState(false)
+  const [ontvangOpen, setOntvangOpen] = useState(false)
   const [heropenId, setHeropenId] = useState<string | null>(null)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
 
@@ -146,6 +148,13 @@ export default function VriendDetail() {
     herlaad()
   }
 
+  async function onOntvang(bedrag: number) {
+    if (!id) return
+    setOntvangOpen(false)
+    await registreerVriendbetaling(id, bedrag)
+    herlaad()
+  }
+
   async function bevestig(betalingId: string) {
     await bevestigBetaling(betalingId)
     herlaad()
@@ -166,6 +175,7 @@ export default function VriendDetail() {
     pendingIn
 
   const jijMoetIets = jijMoetHen.some((p) => openstaand(p) > 0)
+  const zijMoetenIets = zijMoetenJou.some((p) => openstaand(p) > 0)
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
@@ -188,7 +198,14 @@ export default function VriendDetail() {
               </p>
             </div>
 
-            <p className="text-xs font-medium text-gray-400 mb-2">Zij moeten jou</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-400">Zij moeten jou</p>
+              {zijMoetenIets && (
+                <button onClick={() => setOntvangOpen(true)} className="text-sm font-medium text-[#3B6D11]">
+                  {naam ?? 'Vriend'} heeft betaald
+                </button>
+              )}
+            </div>
             {zijMoetenJou.length === 0 ? (
               <p className="text-sm text-gray-500 mb-4">Niets.</p>
             ) : (
@@ -292,6 +309,12 @@ export default function VriendDetail() {
         titel={`Betaling aan ${naam ?? 'vriend'}`}
         onBevestig={onBetaal}
         onClose={() => setBetaalOpen(false)}
+      />
+      <BedragModal
+        open={ontvangOpen}
+        titel={`${naam ?? 'Vriend'} heeft betaald`}
+        onBevestig={onOntvang}
+        onClose={() => setOntvangOpen(false)}
       />
       <TekstModal
         open={heropenId !== null}
