@@ -241,7 +241,10 @@ export type Database = {
     }
     Functions: {
       bevestig_betaling: { Args: { p_betaling_id: string }; Returns: undefined }
-      heropen_post: { Args: { p_post_id: string; p_uitleg: string }; Returns: undefined }
+      heropen_post: {
+        Args: { p_post_id: string; p_uitleg: string }
+        Returns: undefined
+      }
       inkomende_verzoeken: {
         Args: never
         Returns: {
@@ -252,8 +255,13 @@ export type Database = {
       }
       is_gebruikersnaam_vrij: { Args: { p_naam: string }; Returns: boolean }
       is_vriend: { Args: { p_ander: string }; Returns: boolean }
+      ontvriend: { Args: { p_vriendschap_id: string }; Returns: undefined }
       registreer_contactbetaling: {
-        Args: { p_contact_id: string; p_bedrag: number }
+        Args: { p_bedrag: number; p_contact_id: string }
+        Returns: undefined
+      }
+      registreer_vriendbetaling: {
+        Args: { p_bedrag: number; p_vriend_id: string }
         Returns: undefined
       }
       vriendenlijst: {
