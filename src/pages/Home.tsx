@@ -5,20 +5,15 @@ import { haalLokaleContacten } from '../services/lokaleContacten'
 import {
   haalSchuldpostenAlsSchuldeiser,
   haalSchuldpostenAlsSchuldenaar,
-  type Schuldpost,
 } from '../services/schuldposten'
 import { haalMijnGebruikersnaam } from '../services/gebruikers'
 import { haalVrienden } from '../services/vrienden'
 import { haalMijnBetalingen } from '../services/betalingen'
 import Avatar from '../components/Avatar'
-
-const formatEuro = (bedrag: number) => '€ ' + Math.abs(bedrag).toFixed(2).replace('.', ',')
-
-const openstaand = (p: Schuldpost) =>
-  p.status === 'betaald' || p.status === 'geweigerd' ? 0 : p.bedrag - p.gedekt_bedrag
+import { formatEuro } from '../utils/formatteer'
+import { regelsPerPersoon, totaalKrijgt, totaalMoet, type Regel } from '../services/verrekening'
 
 type Vriend = { gebruiker_id: string; gebruikersnaam: string }
-type Regel = { type: 'contact' | 'vriend'; id: string; naam: string; bedrag: number }
 
 export default function Home() {
   const { session } = useAuth()
@@ -47,48 +42,23 @@ export default function Home() {
       ])
       setGebruikersnaam(profiel?.gebruikersnaam ?? null)
 
-      const naamPerContact = new Map((contacten ?? []).map((c) => [c.id, c.naam]))
-      const naamPerVriend = new Map(
-        ((vrienden as Vriend[]) ?? []).map((v) => [v.gebruiker_id, v.gebruikersnaam]),
+      setRegels(
+        regelsPerPersoon({
+          mij,
+          contacten: contacten ?? [],
+          vrienden: (vrienden as Vriend[]) ?? [],
+          alsSchuldeiser: alsSchuldeiser ?? [],
+          alsSchuldenaar: alsSchuldenaar ?? [],
+          betalingen: betalingen ?? [],
+        }),
       )
-
-      const net = new Map<string, Regel>()
-      const tel = (type: Regel['type'], id: string, naam: string, delta: number) => {
-        const sleutel = `${type}:${id}`
-        const huidig = net.get(sleutel)
-        net.set(sleutel, { type, id, naam, bedrag: (huidig?.bedrag ?? 0) + delta })
-      }
-
-      for (const p of alsSchuldeiser ?? []) {
-        if (p.schuldenaar_contact_id) {
-          tel('contact', p.schuldenaar_contact_id, naamPerContact.get(p.schuldenaar_contact_id) ?? 'Onbekend', openstaand(p))
-        } else if (p.schuldenaar_gebruiker_id) {
-          tel('vriend', p.schuldenaar_gebruiker_id, naamPerVriend.get(p.schuldenaar_gebruiker_id) ?? 'Onbekend', openstaand(p))
-        }
-      }
-      for (const p of alsSchuldenaar ?? []) {
-        tel('vriend', p.schuldeiser_id, naamPerVriend.get(p.schuldeiser_id) ?? 'Onbekend', -openstaand(p))
-      }
-      for (const b of betalingen ?? []) {
-        if (b.status !== 'gemeld' && b.status !== 'wacht') continue
-        if (b.betaler_gebruiker_id === mij) {
-          tel('vriend', b.ontvanger_id, naamPerVriend.get(b.ontvanger_id) ?? 'Onbekend', b.bedrag)
-        } else if (b.ontvanger_id === mij && b.betaler_gebruiker_id) {
-          tel('vriend', b.betaler_gebruiker_id, naamPerVriend.get(b.betaler_gebruiker_id) ?? 'Onbekend', -b.bedrag)
-        }
-      }
-
-      const lijst = [...net.values()]
-        .filter((r) => Math.abs(r.bedrag) > 0.001)
-        .sort((a, b) => b.bedrag - a.bedrag)
-      setRegels(lijst)
       setLaden(false)
     }
     laad()
   }, [session])
 
-  const totaalKrijgt = regels.filter((r) => r.bedrag > 0).reduce((s, r) => s + r.bedrag, 0)
-  const totaalMoet = regels.filter((r) => r.bedrag < 0).reduce((s, r) => s - r.bedrag, 0)
+  const totaalTeKrijgen = totaalKrijgt(regels)
+  const totaalTeBetalen = totaalMoet(regels)
 
   return (
     <div>
@@ -100,11 +70,11 @@ export default function Home() {
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white border border-gray-200 rounded-2xl p-4">
           <p className="text-xs text-gray-500">Jij krijgt</p>
-          <p className="text-2xl font-medium text-[#3B6D11] mt-1">{formatEuro(totaalKrijgt)}</p>
+          <p className="text-2xl font-medium text-[#3B6D11] mt-1">{formatEuro(totaalTeKrijgen)}</p>
         </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-4">
           <p className="text-xs text-gray-500">Jij moet</p>
-          <p className="text-2xl font-medium text-red-600 mt-1">{formatEuro(totaalMoet)}</p>
+          <p className="text-2xl font-medium text-red-600 mt-1">{formatEuro(totaalTeBetalen)}</p>
         </div>
       </div>
 

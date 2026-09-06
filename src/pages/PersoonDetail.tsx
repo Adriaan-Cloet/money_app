@@ -10,12 +10,9 @@ import { registreerContactbetaling } from '../services/betalingen'
 import StatusPill from '../components/StatusPill'
 import BedragModal from '../components/BedragModal'
 import BevestigModal from '../components/BevestigModal'
+import { formatEuro, formatDatum } from '../utils/formatteer'
+import { openstaand } from '../services/verrekening'
 
-const formatEuro = (b: number) => '€ ' + b.toFixed(2).replace('.', ',')
-const formatDatum = (d: string) => d.split('-').reverse().join('-')
-
-const openstaand = (p: Schuldpost) =>
-  p.status === 'betaald' || p.status === 'geweigerd' ? 0 : p.bedrag - p.gedekt_bedrag
 const isAfgehandeld = (p: Schuldpost) => p.status === 'betaald' || p.status === 'geweigerd'
 
 function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder?: () => void }) {

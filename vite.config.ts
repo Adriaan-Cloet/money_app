@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -26,4 +26,11 @@ export default defineConfig({
       },
     }),
   ],
+  // Pure logica-tests, geen DOM nodig. Vitest-functies importeer je per bestand
+  // uit 'vitest', zodat tsc -b (en dus de Netlify-build) niet struikelt over
+  // globale namen die hij niet kent.
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+  },
 })

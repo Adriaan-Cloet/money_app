@@ -24,12 +24,8 @@ import StatusPill from '../components/StatusPill'
 import BedragModal from '../components/BedragModal'
 import TekstModal from '../components/TekstModal'
 import BevestigModal from '../components/BevestigModal'
-
-const formatEuro = (b: number) => '€ ' + Math.abs(b).toFixed(2).replace('.', ',')
-const formatDatum = (d: string) => d.split('-').reverse().join('-')
-
-const openstaand = (p: Schuldpost) =>
-  p.status === 'betaald' || p.status === 'geweigerd' ? 0 : p.bedrag - p.gedekt_bedrag
+import { formatEuro, formatDatum } from '../utils/formatteer'
+import { openstaand, saldoMetVriend } from '../services/verrekening'
 
 type Vriend = { gebruiker_id: string; gebruikersnaam: string }
 
@@ -165,14 +161,7 @@ export default function VriendDetail() {
     herlaad()
   }
 
-  const isPending = (b: Betaling) => b.status === 'gemeld' || b.status === 'wacht'
-  const pendingUit = uitgaand.filter(isPending).reduce((s, b) => s + b.bedrag, 0)
-  const pendingIn = inkomend.filter(isPending).reduce((s, b) => s + b.bedrag, 0)
-  const saldo =
-    zijMoetenJou.reduce((s, p) => s + openstaand(p), 0) -
-    jijMoetHen.reduce((s, p) => s + openstaand(p), 0) +
-    pendingUit -
-    pendingIn
+  const saldo = saldoMetVriend({ zijMoetenJou, jijMoetHen, uitgaand, inkomend })
 
   const jijMoetIets = jijMoetHen.some((p) => openstaand(p) > 0)
   const zijMoetenIets = zijMoetenJou.some((p) => openstaand(p) > 0)
