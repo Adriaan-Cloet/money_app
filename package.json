@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "types": "supabase gen types typescript --linked > src/models/database.types.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "format": "prettier --write ."
@@ -29,6 +30,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "prettier": "^3.8.4",
+    "supabase": "^2.116.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
