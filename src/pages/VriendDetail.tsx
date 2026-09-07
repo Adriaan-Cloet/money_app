@@ -18,7 +18,9 @@ import {
   useRegistreerVriendbetaling,
   useBevestigBetaling,
   useMeldBetalingFout,
+  useVerwijderBetaling,
 } from '../queries/betalingen'
+import { useMij } from '../queries/mij'
 import { legeStatusTekst } from '../queries/status'
 import { databaseFoutTekst } from '../queries/fouten'
 import StatusPill from '../components/StatusPill'
@@ -28,8 +30,17 @@ import BevestigModal from '../components/BevestigModal'
 import VerbindingBanner from '../components/VerbindingBanner'
 import { formatEuro, formatDatum } from '../utils/formatteer'
 import { openstaand, saldoMetVriend } from '../services/verrekening'
+import { magPostWeg, magBetalingWeg, POST_GEBLOKKEERD } from '../services/verwijderen'
 
-function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
+function PostRegel({
+  post,
+  actie,
+  uitleg,
+}: {
+  post: Schuldpost
+  actie?: ReactNode
+  uitleg?: string
+}) {
   const afgehandeld = post.status === 'betaald' || post.status === 'geweigerd'
   const rest = post.bedrag - post.gedekt_bedrag
   return (
@@ -53,6 +64,7 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
       {post.heropening_uitleg && (
         <p className="mt-2 text-xs text-gray-500">Heropend: {post.heropening_uitleg}</p>
       )}
+      {uitleg && <p className="mt-2 text-xs text-gray-400">{uitleg}</p>}
     </li>
   )
 }
@@ -86,6 +98,7 @@ export default function VriendDetail() {
   const [ontvangOpen, setOntvangOpen] = useState(false)
   const [heropenId, setHeropenId] = useState<string | null>(null)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
+  const [teVerwijderenBetaling, setTeVerwijderenBetaling] = useState<Betaling | null>(null)
 
   const vrienden = useVrienden()
   const postenVanVriend = usePostenVanVriend(id)
@@ -100,15 +113,12 @@ export default function VriendDetail() {
   const ontvang = useRegistreerVriendbetaling()
   const bevestig = useBevestigBetaling()
   const meldFout = useMeldBetalingFout()
+  const verwijderBetaling = useVerwijderBetaling()
+  const mij = useMij()
 
   // Alle vier de bronnen zijn nodig voor het saldo. Mist er een, dan toont
   // legeStatusTekst waarom in plaats van een verkeerd bedrag.
-  const bronnen = [
-    postenVanVriend,
-    postenAlsSchuldenaar,
-    inkomendeBetalingen,
-    uitgaandeBetalingen,
-  ]
+  const bronnen = [postenVanVriend, postenAlsSchuldenaar, inkomendeBetalingen, uitgaandeBetalingen]
   const legeTekst = bronnen.map(legeStatusTekst).find((tekst) => tekst !== null) ?? null
 
   const zijMoetenJou = postenVanVriend.data ?? []
@@ -119,9 +129,19 @@ export default function VriendDetail() {
   const inkomend = inkomendeBetalingen.data ?? []
   const uitgaand = uitgaandeBetalingen.data ?? []
 
-  const naam = vrienden.data?.find((vriend) => vriend.gebruiker_id === id)?.gebruikersnaam ?? 'Vriend'
+  const naam =
+    vrienden.data?.find((vriend) => vriend.gebruiker_id === id)?.gebruikersnaam ?? 'Vriend'
 
-  const mutaties = [weiger, heropen, verwijder, betaal, ontvang, bevestig, meldFout]
+  const mutaties = [
+    weiger,
+    heropen,
+    verwijder,
+    verwijderBetaling,
+    betaal,
+    ontvang,
+    bevestig,
+    meldFout,
+  ]
   const fout = databaseFoutTekst(mutaties.map((m) => m.error).find((f) => f !== null) ?? null)
   const bezig = mutaties.some((m) => m.isPending)
 
@@ -141,6 +161,13 @@ export default function VriendDetail() {
     const postId = teVerwijderen.id
     setTeVerwijderen(null)
     verwijder.mutate(postId)
+  }
+
+  function onVerwijderBetaling() {
+    if (!teVerwijderenBetaling) return
+    const betalingId = teVerwijderenBetaling.id
+    setTeVerwijderenBetaling(null)
+    verwijderBetaling.mutate(betalingId)
   }
 
   function onBetaal(bedrag: number) {
@@ -202,27 +229,28 @@ export default function VriendDetail() {
                   <PostRegel
                     key={post.id}
                     post={post}
+                    uitleg={magPostWeg(post) ? undefined : POST_GEBLOKKEERD}
                     actie={
-                      post.status === 'geweigerd' ? (
-                        <div className="flex gap-3">
-                          {!post.heropend && (
-                            <button
-                              onClick={() => setHeropenId(post.id)}
-                              disabled={bezig}
-                              className="text-sm text-[#3B6D11] disabled:opacity-60"
-                            >
-                              Heropenen
-                            </button>
-                          )}
+                      <div className="flex gap-3">
+                        {post.status === 'geweigerd' && !post.heropend && (
                           <button
-                            onClick={() => setTeVerwijderen(post)}
+                            onClick={() => setHeropenId(post.id)}
                             disabled={bezig}
-                            className="text-sm text-red-600 disabled:opacity-60"
+                            className="text-sm text-[#3B6D11] disabled:opacity-60"
                           >
-                            Verwijderen
+                            Heropenen
                           </button>
-                        </div>
-                      ) : undefined
+                        )}
+                        <button
+                          onClick={() => setTeVerwijderen(post)}
+                          disabled={bezig || !magPostWeg(post)}
+                          className={`text-sm ${
+                            magPostWeg(post) ? 'text-red-600 disabled:opacity-60' : 'text-gray-400'
+                          }`}
+                        >
+                          Verwijderen
+                        </button>
+                      </div>
                     }
                   />
                 ))}
@@ -231,7 +259,9 @@ export default function VriendDetail() {
 
             {inkomend.length > 0 && (
               <div className="mb-6">
-                <p className="text-xs font-medium text-gray-400 mb-2">Gemelde betalingen van {naam}</p>
+                <p className="text-xs font-medium text-gray-400 mb-2">
+                  Gemelde betalingen van {naam}
+                </p>
                 <ul className="space-y-2">
                   {inkomend.map((betaling) => (
                     <BetalingRegel
@@ -312,6 +342,17 @@ export default function VriendDetail() {
                           ? `Gemeld, wacht op bevestiging van ${naam}`
                           : undefined
                       }
+                      acties={
+                        mij !== null && magBetalingWeg(betaling, mij) ? (
+                          <button
+                            onClick={() => setTeVerwijderenBetaling(betaling)}
+                            disabled={bezig}
+                            className="text-sm text-red-600 disabled:opacity-60"
+                          >
+                            Verwijderen
+                          </button>
+                        ) : undefined
+                      }
                     />
                   ))}
                 </ul>
@@ -343,9 +384,16 @@ export default function VriendDetail() {
       <BevestigModal
         open={teVerwijderen !== null}
         titel="Post verwijderen?"
-        tekst="Deze geweigerde post wordt definitief verwijderd."
+        tekst={`Deze post verdwijnt definitief, ook bij ${naam}.`}
         onBevestig={onVerwijder}
         onClose={() => setTeVerwijderen(null)}
+      />
+      <BevestigModal
+        open={teVerwijderenBetaling !== null}
+        titel="Melding verwijderen?"
+        tekst={`Je melding verdwijnt definitief. ${naam} kan ze daarna niet meer bevestigen.`}
+        onBevestig={onVerwijderBetaling}
+        onClose={() => setTeVerwijderenBetaling(null)}
       />
     </div>
   )

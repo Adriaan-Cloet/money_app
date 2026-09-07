@@ -11,7 +11,7 @@ import {
   verwijderPost,
 } from '../services/schuldposten'
 import { sleutels } from './sleutels'
-import { ontpak } from './ontpak'
+import { ontpak, ontpakVerwijderd } from './ontpak'
 import { useMij } from './mij'
 import { useVerversGeld } from './invalidatie'
 import { vereisVerbinding } from './verbinding'
@@ -106,6 +106,13 @@ export function useHeropenPost() {
   )
 }
 
+// De UI zet de knop al uit bij een post met dekking. Komt de mutatie hier toch
+// terecht, dan was het scherm verouderd: er is intussen een betaling bevestigd.
 export function useVerwijderPost() {
-  return usePostMutatie((postId: string) => ontpak(verwijderPost(postId)))
+  return usePostMutatie((postId: string) =>
+    ontpakVerwijderd(
+      verwijderPost(postId),
+      'Verwijderen lukte niet. Er is intussen op deze post betaald.',
+    ),
+  )
 }

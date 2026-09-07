@@ -10,3 +10,15 @@ export async function ontpak<T>(belofte: PromiseLike<Antwoord<T>>): Promise<T> {
   if (error) throw error
   return data
 }
+
+// Een delete die door RLS geweigerd wordt, geeft geen fout: er verdwijnen enkel
+// 0 rijen. Daarom vraagt de servicelaag de verwijderde rijen op met .select() en
+// controleren we hier of er echt iets weg is. Zonder dit meldt het scherm
+// "gelukt" terwijl de rij gewoon blijft staan.
+export async function ontpakVerwijderd<T>(
+  belofte: PromiseLike<Antwoord<T[]>>,
+  reden: string,
+): Promise<void> {
+  const rijen = await ontpak(belofte)
+  if (rijen.length === 0) throw new Error(reden)
+}

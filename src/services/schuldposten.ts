@@ -31,9 +31,12 @@ export async function heropenPost(postId: string, uitleg: string) {
   return supabase.rpc('heropen_post', { p_post_id: postId, p_uitleg: uitleg })
 }
 
-// De schuldeiser verwijdert een (geweigerde) post volledig.
+// De schuldeiser verwijdert een eigen post volledig.
+// De .select() is geen luxe: een delete die door RLS geweigerd wordt, geeft
+// geen fout maar wist stil 0 rijen. Zo krijgt de aanroeper de verwijderde rij
+// terug en weet hij of er echt iets weg is.
 export async function verwijderPost(postId: string) {
-  return supabase.from('schuldposten').delete().eq('id', postId)
+  return supabase.from('schuldposten').delete().eq('id', postId).select()
 }
 
 // Alle posten van 1 lokaal contact (RLS beperkt tot je eigen posten).

@@ -6,11 +6,12 @@ import {
   maakBetaling,
   bevestigBetaling,
   meldBetalingFout,
+  verwijderBetaling,
   registreerContactbetaling,
   registreerVriendbetaling,
 } from '../services/betalingen'
 import { sleutels } from './sleutels'
-import { ontpak } from './ontpak'
+import { ontpak, ontpakVerwijderd } from './ontpak'
 import { useMij } from './mij'
 import { useVerversGeld } from './invalidatie'
 import { vereisVerbinding } from './verbinding'
@@ -70,6 +71,17 @@ export function useMaakBetaling() {
 
 export function useBevestigBetaling() {
   return useBetalingMutatie((betalingId: string) => ontpak(bevestigBetaling(betalingId)))
+}
+
+// Enkel de maker, en enkel zolang de betaling niet bevestigd is. Zie
+// magBetalingWeg voor de regel en de RLS-policy die ze afdwingt.
+export function useVerwijderBetaling() {
+  return useBetalingMutatie((betalingId: string) =>
+    ontpakVerwijderd(
+      verwijderBetaling(betalingId),
+      'Verwijderen lukte niet. Deze betaling is intussen bevestigd.',
+    ),
+  )
 }
 
 export function useMeldBetalingFout() {

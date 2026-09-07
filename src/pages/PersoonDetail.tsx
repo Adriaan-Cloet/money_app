@@ -12,11 +12,16 @@ import BevestigModal from '../components/BevestigModal'
 import VerbindingBanner from '../components/VerbindingBanner'
 import { formatEuro, formatDatum } from '../utils/formatteer'
 import { openstaand } from '../services/verrekening'
+import { magPostWeg, POST_GEBLOKKEERD } from '../services/verwijderen'
 
 const isAfgehandeld = (p: Schuldpost) => p.status === 'betaald' || p.status === 'geweigerd'
 
-function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder?: () => void }) {
+// Elke post hier is er een van jou, dus de verwijderknop staat er altijd. Hij
+// gaat uit zodra er dekking op de post staat; de uitleg eronder zegt waarom
+// (US-022).
+function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder: () => void }) {
   const afgehandeld = isAfgehandeld(post)
+  const magWeg = magPostWeg(post)
   const rest = post.bedrag - post.gedekt_bedrag
   return (
     <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
@@ -34,12 +39,15 @@ function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder?: () =
           <span>{formatDatum(post.datum)}</span>
           {post.status === 'deels_betaald' && <span>nog {formatEuro(rest)}</span>}
         </div>
-        {onVerwijder && (
-          <button onClick={onVerwijder} className="text-sm text-red-600">
-            Verwijderen
-          </button>
-        )}
+        <button
+          onClick={onVerwijder}
+          disabled={!magWeg}
+          className={`text-sm ${magWeg ? 'text-red-600' : 'text-gray-400'}`}
+        >
+          Verwijderen
+        </button>
       </div>
+      {!magWeg && <p className="mt-2 text-xs text-gray-400">{POST_GEBLOKKEERD}</p>}
     </li>
   )
 }
@@ -127,7 +135,11 @@ export default function PersoonDetail() {
                 <p className="text-xs font-medium text-gray-400 mb-2">Afgehandeld</p>
                 <ul className="space-y-2">
                   {afgehandeld.map((post) => (
-                    <PostRegel key={post.id} post={post} />
+                    <PostRegel
+                      key={post.id}
+                      post={post}
+                      onVerwijder={() => setTeVerwijderen(post)}
+                    />
                   ))}
                 </ul>
               </>

@@ -57,6 +57,12 @@ export async function registreerVriendbetaling(vriendId: string, bedrag: number)
   return supabase.rpc('registreer_vriendbetaling', { p_vriend_id: vriendId, p_bedrag: bedrag })
 }
 
+// De maker verwijdert zijn eigen betaling. RLS laat dat enkel toe zolang ze
+// niet bevestigd is; zie verwijderPost voor waarom de .select() erbij staat.
+export async function verwijderBetaling(betalingId: string) {
+  return supabase.from('betalingen').delete().eq('id', betalingId).select()
+}
+
 // Ontvanger meldt dat een betaling niet klopt (RLS: enkel de ontvanger).
 // Het bedrag telt daarna niet meer mee; de betaler moet het oplossen.
 export async function meldBetalingFout(betalingId: string) {
