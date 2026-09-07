@@ -42,16 +42,19 @@ export default function BedragModal({
         value={waarde}
         onChange={(e) => setWaarde(e.target.value)}
         style={{ fontSize: '1.25rem' }}
-        className="w-full border border-gray-300 rounded-lg px-3 py-3 font-medium text-[#3B6D11] mb-2"
+        className="w-full border border-rand-sterk rounded-lg px-3 py-3 font-medium text-merk mb-2"
       />
-      {fout && <p className="text-sm text-red-600 mb-2">{fout}</p>}
+      {fout && <p className="text-sm text-gevaar mb-2">{fout}</p>}
       <div className="flex gap-2 mt-2">
-        <button onClick={sluit} className="flex-1 border border-gray-300 rounded-lg py-2.5 text-sm">
+        <button
+          onClick={sluit}
+          className="flex-1 border border-rand-sterk rounded-lg py-2.5 text-sm"
+        >
           Annuleren
         </button>
         <button
           onClick={bevestig}
-          className="flex-1 bg-[#3B6D11] text-white rounded-lg py-2.5 text-sm font-medium"
+          className="flex-1 bg-merk-vlak text-merk-op rounded-lg py-2.5 text-sm font-medium"
         >
           Bevestigen
         </button>

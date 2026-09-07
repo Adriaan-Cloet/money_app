@@ -22,3 +22,11 @@ export async function ontpakVerwijderd<T>(
   const rijen = await ontpak(belofte)
   if (rijen.length === 0) throw new Error(reden)
 }
+
+// De authclient wijkt af: bij een fout geeft die `{ data: { user: null }, error }`
+// terug in plaats van `data: null`, dus die past niet in Antwoord<T>. Van
+// updateUser hebben we het resultaat toch niet nodig, enkel of het lukte.
+export async function ontpakAuth(belofte: PromiseLike<{ error: Error | null }>): Promise<void> {
+  const { error } = await belofte
+  if (error) throw error
+}

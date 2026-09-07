@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, registreer, gebruikersnaamVrij } from '../services/auth'
+import {
+  login,
+  registreer,
+  gebruikersnaamVrij,
+  GEBRUIKERSNAAM_PATROON,
+  GEBRUIKERSNAAM_UITLEG,
+} from '../services/auth'
 import { vertaalAuthFout } from '../services/authFouten'
 import { onlineManager } from '@tanstack/react-query'
 import { GeenVerbindingFout } from '../queries/verbinding'
@@ -29,8 +35,8 @@ export default function Auth() {
       return
     }
 
-    if (modus === 'registreer' && !/^[A-Za-z0-9_]{3,20}$/.test(gebruikersnaam)) {
-      setFout('Gebruikersnaam: 3-20 tekens, enkel letters, cijfers en _.')
+    if (modus === 'registreer' && !GEBRUIKERSNAAM_PATROON.test(gebruikersnaam)) {
+      setFout(GEBRUIKERSNAAM_UITLEG)
       return
     }
 
@@ -66,22 +72,22 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-[calc(env(safe-area-inset-top)+1rem)]">
-      <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-grond px-4 py-[calc(env(safe-area-inset-top)+1rem)]">
+      <div className="w-full max-w-sm bg-vlak rounded-2xl border border-rand p-6">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#3B6D11] text-white text-2xl font-medium inline-flex items-center justify-center mb-3">
+          <div className="w-14 h-14 rounded-2xl bg-merk-vlak text-merk-op text-2xl font-medium inline-flex items-center justify-center mb-3">
             €
           </div>
-          <h1 className="text-xl font-medium text-[#3B6D11]">PayMeBack</h1>
-          <p className="text-sm text-gray-500 mt-1">Samen simpel afrekenen</p>
+          <h1 className="text-xl font-medium text-merk">PayMeBack</h1>
+          <p className="text-sm text-zacht mt-1">Samen simpel afrekenen</p>
         </div>
 
-        <div className="flex border-b border-gray-200 mb-5">
+        <div className="flex border-b border-rand mb-5">
           <button
             type="button"
             onClick={() => setModus('login')}
             className={`flex-1 py-2 text-sm ${
-              modus === 'login' ? 'border-b-2 border-[#3B6D11] font-medium' : 'text-gray-500'
+              modus === 'login' ? 'border-b-2 border-merk font-medium' : 'text-zacht'
             }`}
           >
             Inloggen
@@ -90,7 +96,7 @@ export default function Auth() {
             type="button"
             onClick={() => setModus('registreer')}
             className={`flex-1 py-2 text-sm ${
-              modus === 'registreer' ? 'border-b-2 border-[#3B6D11] font-medium' : 'text-gray-500'
+              modus === 'registreer' ? 'border-b-2 border-merk font-medium' : 'text-zacht'
             }`}
           >
             Registreren
@@ -105,7 +111,7 @@ export default function Auth() {
               value={gebruikersnaam}
               onChange={(e) => setGebruikersnaam(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+              className="w-full border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
             />
           )}
           <input
@@ -114,7 +120,7 @@ export default function Auth() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+            className="w-full border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
           />
           <input
             type="password"
@@ -123,15 +129,15 @@ export default function Auth() {
             onChange={(e) => setWachtwoord(e.target.value)}
             required
             minLength={6}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+            className="w-full border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
           />
 
-          {fout && <p className="text-sm text-red-600">{fout}</p>}
+          {fout && <p className="text-sm text-gevaar">{fout}</p>}
 
           <button
             type="submit"
             disabled={bezig}
-            className="w-full bg-[#3B6D11] text-white rounded-lg py-3 text-sm font-medium disabled:opacity-60"
+            className="w-full bg-merk-vlak text-merk-op rounded-lg py-3 text-sm font-medium disabled:opacity-60"
           >
             {bezig ? 'Bezig...' : modus === 'login' ? 'Inloggen' : 'Account aanmaken'}
           </button>

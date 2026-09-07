@@ -18,10 +18,7 @@ export default function Modal({
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-sm bg-white rounded-2xl p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full max-w-sm bg-vlak rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-medium mb-4">{titel}</h2>
         {children}
       </div>

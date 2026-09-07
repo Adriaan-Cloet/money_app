@@ -18,13 +18,13 @@ export default function VerbindingBanner() {
   if (online && !onbereikbaar) return null
 
   return (
-    <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5">
-      <p className="text-xs font-medium text-amber-900">
+    <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 donker:border-amber-400/25 donker:bg-amber-400/10">
+      <p className="text-xs font-medium text-amber-900 donker:text-amber-200">
         {online ? 'Server niet bereikbaar.' : 'Geen verbinding.'} Je ziet je laatst bewaarde
         gegevens.
       </p>
       {laatstBijgewerkt !== null && (
-        <p className="mt-0.5 text-xs text-amber-700">
+        <p className="mt-0.5 text-xs text-amber-700 donker:text-amber-300/80">
           Laatst bijgewerkt om {formatTijd(laatstBijgewerkt)}.
         </p>
       )}

@@ -44,17 +44,17 @@ function PostRegel({
   const afgehandeld = post.status === 'betaald' || post.status === 'geweigerd'
   const rest = post.bedrag - post.gedekt_bedrag
   return (
-    <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
+    <li className="bg-vlak border border-rand rounded-2xl px-4 py-3">
       <div className="flex items-baseline justify-between">
-        <span className={`text-sm font-medium ${afgehandeld ? 'text-gray-400 line-through' : ''}`}>
+        <span className={`text-sm font-medium ${afgehandeld ? 'text-flauw line-through' : ''}`}>
           {post.omschrijving || 'Geen omschrijving'}
         </span>
-        <span className={`text-sm font-medium ${afgehandeld ? 'text-gray-400' : ''}`}>
+        <span className={`text-sm font-medium ${afgehandeld ? 'text-flauw' : ''}`}>
           {formatEuro(post.bedrag)}
         </span>
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-flauw">
           <StatusPill status={post.status} />
           <span>{formatDatum(post.datum)}</span>
           {post.status === 'deels_betaald' && <span>nog {formatEuro(rest)}</span>}
@@ -62,9 +62,9 @@ function PostRegel({
         {actie}
       </div>
       {post.heropening_uitleg && (
-        <p className="mt-2 text-xs text-gray-500">Heropend: {post.heropening_uitleg}</p>
+        <p className="mt-2 text-xs text-zacht">Heropend: {post.heropening_uitleg}</p>
       )}
-      {uitleg && <p className="mt-2 text-xs text-gray-400">{uitleg}</p>}
+      {uitleg && <p className="mt-2 text-xs text-flauw">{uitleg}</p>}
     </li>
   )
 }
@@ -79,12 +79,12 @@ function BetalingRegel({
   acties?: ReactNode
 }) {
   return (
-    <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
+    <li className="bg-vlak border border-rand rounded-2xl px-4 py-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{formatEuro(betaling.bedrag)}</span>
         <StatusPill status={betaling.status} />
       </div>
-      {toelichting && <p className="mt-1 text-xs text-gray-500">{toelichting}</p>}
+      {toelichting && <p className="mt-1 text-xs text-zacht">{toelichting}</p>}
       {acties && <div className="mt-2 flex gap-3">{acties}</div>}
     </li>
   )
@@ -183,46 +183,44 @@ export default function VriendDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+    <div className="min-h-screen bg-grond px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-5">
-          <button onClick={() => navigate(-1)} className="text-gray-500 text-sm">
+          <button onClick={() => navigate(-1)} className="text-zacht text-sm">
             &larr; Terug
           </button>
-          <h1 className="text-xl font-medium text-[#3B6D11]">{naam}</h1>
+          <h1 className="text-xl font-medium text-merk">{naam}</h1>
         </div>
 
         <VerbindingBanner />
 
-        {fout && <p className="text-sm text-red-600 mb-4">{fout}</p>}
+        {fout && <p className="text-sm text-gevaar mb-4">{fout}</p>}
 
         {legeTekst ? (
-          <p className="text-sm text-gray-500">{legeTekst}</p>
+          <p className="text-sm text-zacht">{legeTekst}</p>
         ) : (
           <>
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 text-center">
-              <p className="text-xs text-gray-500">Saldo met {naam}</p>
-              <p
-                className={`text-2xl font-medium mt-1 ${saldo < 0 ? 'text-red-600' : 'text-[#3B6D11]'}`}
-              >
+            <div className="bg-vlak border border-rand rounded-2xl p-4 mb-6 text-center">
+              <p className="text-xs text-zacht">Saldo met {naam}</p>
+              <p className={`text-2xl font-medium mt-1 ${saldo < 0 ? 'text-gevaar' : 'text-merk'}`}>
                 {saldo < 0 ? 'Jij moet' : 'Jij krijgt'} {formatEuro(saldo)}
               </p>
             </div>
 
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-gray-400">Zij moeten jou</p>
+              <p className="text-xs font-medium text-flauw">Zij moeten jou</p>
               {zijMoetenIets && (
                 <button
                   onClick={() => setOntvangOpen(true)}
                   disabled={bezig}
-                  className="text-sm font-medium text-[#3B6D11] disabled:opacity-60"
+                  className="text-sm font-medium text-merk disabled:opacity-60"
                 >
                   {naam} heeft betaald
                 </button>
               )}
             </div>
             {zijMoetenJou.length === 0 ? (
-              <p className="text-sm text-gray-500 mb-4">Niets.</p>
+              <p className="text-sm text-zacht mb-4">Niets.</p>
             ) : (
               <ul className="space-y-2 mb-4">
                 {zijMoetenJou.map((post) => (
@@ -236,7 +234,7 @@ export default function VriendDetail() {
                           <button
                             onClick={() => setHeropenId(post.id)}
                             disabled={bezig}
-                            className="text-sm text-[#3B6D11] disabled:opacity-60"
+                            className="text-sm text-merk disabled:opacity-60"
                           >
                             Heropenen
                           </button>
@@ -245,7 +243,7 @@ export default function VriendDetail() {
                           onClick={() => setTeVerwijderen(post)}
                           disabled={bezig || !magPostWeg(post)}
                           className={`text-sm ${
-                            magPostWeg(post) ? 'text-red-600 disabled:opacity-60' : 'text-gray-400'
+                            magPostWeg(post) ? 'text-gevaar disabled:opacity-60' : 'text-flauw'
                           }`}
                         >
                           Verwijderen
@@ -259,9 +257,7 @@ export default function VriendDetail() {
 
             {inkomend.length > 0 && (
               <div className="mb-6">
-                <p className="text-xs font-medium text-gray-400 mb-2">
-                  Gemelde betalingen van {naam}
-                </p>
+                <p className="text-xs font-medium text-flauw mb-2">Gemelde betalingen van {naam}</p>
                 <ul className="space-y-2">
                   {inkomend.map((betaling) => (
                     <BetalingRegel
@@ -273,14 +269,14 @@ export default function VriendDetail() {
                             <button
                               onClick={() => bevestig.mutate(betaling.id)}
                               disabled={bezig}
-                              className="text-sm text-[#3B6D11] disabled:opacity-60"
+                              className="text-sm text-merk disabled:opacity-60"
                             >
                               Bevestigen
                             </button>
                             <button
                               onClick={() => meldFout.mutate(betaling.id)}
                               disabled={bezig}
-                              className="text-sm text-red-600 disabled:opacity-60"
+                              className="text-sm text-gevaar disabled:opacity-60"
                             >
                               Fout
                             </button>
@@ -294,19 +290,19 @@ export default function VriendDetail() {
             )}
 
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-gray-400">Jij moet hen</p>
+              <p className="text-xs font-medium text-flauw">Jij moet hen</p>
               {jijMoetIets && (
                 <button
                   onClick={() => setBetaalOpen(true)}
                   disabled={bezig}
-                  className="text-sm font-medium text-[#3B6D11] disabled:opacity-60"
+                  className="text-sm font-medium text-merk disabled:opacity-60"
                 >
                   Ik heb betaald
                 </button>
               )}
             </div>
             {jijMoetHen.length === 0 ? (
-              <p className="text-sm text-gray-500 mb-4">Niets.</p>
+              <p className="text-sm text-zacht mb-4">Niets.</p>
             ) : (
               <ul className="space-y-2 mb-4">
                 {jijMoetHen.map((post) => (
@@ -318,7 +314,7 @@ export default function VriendDetail() {
                         <button
                           onClick={() => weiger.mutate(post.id)}
                           disabled={bezig}
-                          className="text-sm text-red-600 disabled:opacity-60"
+                          className="text-sm text-gevaar disabled:opacity-60"
                         >
                           Weigeren
                         </button>
@@ -331,7 +327,7 @@ export default function VriendDetail() {
 
             {uitgaand.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-400 mb-2">Jouw gemelde betalingen</p>
+                <p className="text-xs font-medium text-flauw mb-2">Jouw gemelde betalingen</p>
                 <ul className="space-y-2">
                   {uitgaand.map((betaling) => (
                     <BetalingRegel
@@ -347,7 +343,7 @@ export default function VriendDetail() {
                           <button
                             onClick={() => setTeVerwijderenBetaling(betaling)}
                             disabled={bezig}
-                            className="text-sm text-red-600 disabled:opacity-60"
+                            className="text-sm text-gevaar disabled:opacity-60"
                           >
                             Verwijderen
                           </button>

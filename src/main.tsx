@@ -6,6 +6,10 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
 import { queryClient, persister, CACHE_VERSIE, CACHE_MAX_LEEFTIJD } from './queries/client.ts'
+import { startThema } from './utils/thema.ts'
+
+// Voor de eerste render, zodat de app niet even in het verkeerde thema staat.
+startThema()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

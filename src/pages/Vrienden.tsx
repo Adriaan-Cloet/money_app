@@ -69,7 +69,7 @@ export default function Vrienden() {
 
   return (
     <div>
-      <h1 className="text-2xl font-medium text-gray-900 mb-5">Vrienden</h1>
+      <h1 className="text-2xl font-medium text-tekst mb-5">Vrienden</h1>
 
       <form onSubmit={zoekGebruiker} className="flex gap-2 mb-2">
         <input
@@ -77,32 +77,32 @@ export default function Vrienden() {
           placeholder="Zoek op gebruikersnaam"
           value={zoekterm}
           onChange={(e) => setZoekterm(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+          className="flex-1 border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
         />
         <button
           type="submit"
           disabled={zoek.isPending}
-          className="bg-[#3B6D11] text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
+          className="bg-merk-vlak text-merk-op rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
         >
           {zoek.isPending ? 'Bezig...' : 'Zoek'}
         </button>
       </form>
 
-      {zoekFout && <p className="text-sm text-gray-500 mb-3">{zoekFout}</p>}
+      {zoekFout && <p className="text-sm text-zacht mb-3">{zoekFout}</p>}
       {zoek.isSuccess && resultaat === null && (
-        <p className="text-sm text-gray-500 mb-3">Geen gebruiker met die gebruikersnaam gevonden.</p>
+        <p className="text-sm text-zacht mb-3">Geen gebruiker met die gebruikersnaam gevonden.</p>
       )}
-      {verzoekFout && <p className="text-sm text-red-600 mb-3">{verzoekFout}</p>}
-      {stuurVerzoek.isSuccess && <p className="text-sm text-[#3B6D11] mb-3">Verzoek verstuurd.</p>}
+      {verzoekFout && <p className="text-sm text-gevaar mb-3">{verzoekFout}</p>}
+      {stuurVerzoek.isSuccess && <p className="text-sm text-merk mb-3">Verzoek verstuurd.</p>}
 
       {resultaat && (
-        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4">
+        <div className="flex items-center gap-3 bg-vlak border border-rand rounded-2xl px-4 py-3 mb-4">
           <Avatar naam={resultaat.gebruikersnaam} />
           <span className="flex-1 text-sm font-medium">{resultaat.gebruikersnaam}</span>
           <button
             onClick={voegToe}
             disabled={stuurVerzoek.isPending}
-            className="bg-[#3B6D11] text-white rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-60"
+            className="bg-merk-vlak text-merk-op rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-60"
           >
             Verzoek sturen
           </button>
@@ -111,26 +111,26 @@ export default function Vrienden() {
 
       {verzoekenLijst.length > 0 && (
         <div className="mb-6">
-          <p className="text-xs font-medium text-gray-400 mb-2">Inkomende verzoeken</p>
+          <p className="text-xs font-medium text-flauw mb-2">Inkomende verzoeken</p>
           <ul className="space-y-2">
             {verzoekenLijst.map((verzoek) => (
               <li
                 key={verzoek.vriendschap_id}
-                className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
+                className="flex items-center gap-3 bg-vlak border border-rand rounded-2xl px-4 py-3"
               >
                 <Avatar naam={verzoek.gebruikersnaam} />
                 <span className="flex-1 text-sm font-medium">{verzoek.gebruikersnaam}</span>
                 <button
                   onClick={() => aanvaard.mutate(verzoek.vriendschap_id)}
                   disabled={aanvaard.isPending || weiger.isPending}
-                  className="text-[#3B6D11] text-sm font-medium disabled:opacity-60"
+                  className="text-merk text-sm font-medium disabled:opacity-60"
                 >
                   Accepteren
                 </button>
                 <button
                   onClick={() => weiger.mutate(verzoek.vriendschap_id)}
                   disabled={aanvaard.isPending || weiger.isPending}
-                  className="text-gray-400 text-sm disabled:opacity-60"
+                  className="text-flauw text-sm disabled:opacity-60"
                 >
                   Weigeren
                 </button>
@@ -140,17 +140,17 @@ export default function Vrienden() {
         </div>
       )}
 
-      <p className="text-xs font-medium text-gray-400 mb-2">Mijn vrienden</p>
+      <p className="text-xs font-medium text-flauw mb-2">Mijn vrienden</p>
       {legeTekst ? (
-        <p className="text-sm text-gray-500">{legeTekst}</p>
+        <p className="text-sm text-zacht">{legeTekst}</p>
       ) : vriendenLijst.length === 0 ? (
-        <p className="text-sm text-gray-500">Nog geen vrienden.</p>
+        <p className="text-sm text-zacht">Nog geen vrienden.</p>
       ) : (
         <ul className="space-y-2">
           {vriendenLijst.map((vriend) => (
             <li
               key={vriend.gebruiker_id}
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
+              className="flex items-center gap-3 bg-vlak border border-rand rounded-2xl px-4 py-3"
             >
               <Link
                 to={`/vriend/${vriend.gebruiker_id}`}
@@ -161,7 +161,7 @@ export default function Vrienden() {
               </Link>
               <button
                 onClick={() => setTeVerwijderenVriend(vriend)}
-                className="text-gray-400 text-sm shrink-0"
+                className="text-flauw text-sm shrink-0"
               >
                 Verwijderen
               </button>

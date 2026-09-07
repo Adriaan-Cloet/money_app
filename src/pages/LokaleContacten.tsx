@@ -53,7 +53,7 @@ export default function LokaleContacten() {
 
   return (
     <div>
-      <h1 className="text-2xl font-medium text-gray-900 mb-5">Contacten</h1>
+      <h1 className="text-2xl font-medium text-tekst mb-5">Contacten</h1>
 
       <form onSubmit={voegToe} className="flex gap-2 mb-5">
         <input
@@ -61,29 +61,29 @@ export default function LokaleContacten() {
           placeholder="Naam van een lokaal contact"
           value={nieuweNaam}
           onChange={(e) => setNieuweNaam(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+          className="flex-1 border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
         />
         <button
           type="submit"
           disabled={bezig}
-          className="bg-[#3B6D11] text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
+          className="bg-merk-vlak text-merk-op rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
         >
           Toevoegen
         </button>
       </form>
 
-      {fout && <p className="text-sm text-red-600 mb-3">{fout}</p>}
+      {fout && <p className="text-sm text-gevaar mb-3">{fout}</p>}
 
       {legeTekst ? (
-        <p className="text-sm text-gray-500">{legeTekst}</p>
+        <p className="text-sm text-zacht">{legeTekst}</p>
       ) : lijst.length === 0 ? (
-        <p className="text-sm text-gray-500">Nog geen lokale contacten.</p>
+        <p className="text-sm text-zacht">Nog geen lokale contacten.</p>
       ) : (
         <ul className="space-y-2">
           {lijst.map((contact) => (
             <li
               key={contact.id}
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
+              className="flex items-center gap-3 bg-vlak border border-rand rounded-2xl px-4 py-3"
             >
               {bewerktId === contact.id ? (
                 <>
@@ -92,16 +92,16 @@ export default function LokaleContacten() {
                     autoFocus
                     value={bewerkNaam}
                     onChange={(e) => setBewerkNaam(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+                    className="flex-1 border border-rand-sterk rounded-lg px-2 py-1.5 text-sm"
                   />
                   <button
                     onClick={() => bewaarBewerking(contact.id)}
                     disabled={bezig}
-                    className="text-[#3B6D11] text-sm font-medium disabled:opacity-60"
+                    className="text-merk text-sm font-medium disabled:opacity-60"
                   >
                     Bewaren
                   </button>
-                  <button onClick={() => setBewerktId(null)} className="text-gray-400 text-sm">
+                  <button onClick={() => setBewerktId(null)} className="text-flauw text-sm">
                     Annuleren
                   </button>
                 </>
@@ -114,11 +114,11 @@ export default function LokaleContacten() {
                       setBewerktId(contact.id)
                       setBewerkNaam(contact.naam)
                     }}
-                    className="text-gray-400 text-sm"
+                    className="text-flauw text-sm"
                   >
                     Bewerken
                   </button>
-                  <button onClick={() => setTeVerwijderen(contact)} className="text-red-600 text-sm">
+                  <button onClick={() => setTeVerwijderen(contact)} className="text-gevaar text-sm">
                     Verwijderen
                   </button>
                 </>

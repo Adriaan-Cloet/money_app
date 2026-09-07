@@ -51,7 +51,7 @@ function Tab({ to, naam, badge = 0 }: { to: string; naam: string; badge?: number
       to={to}
       end
       className={({ isActive }) =>
-        `flex-1 flex justify-center py-3 ${isActive ? 'text-[#3B6D11]' : 'text-gray-400'}`
+        `flex-1 flex justify-center py-3 ${isActive ? 'text-merk' : 'text-flauw'}`
       }
     >
       <span className="relative">
@@ -59,7 +59,7 @@ function Tab({ to, naam, badge = 0 }: { to: string; naam: string; badge?: number
         {badge > 0 && (
           <span
             aria-label={`${badge} openstaande acties`}
-            className="absolute -top-1 -right-2 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-600 text-white text-[0.65rem] font-medium flex items-center justify-center"
+            className="absolute -top-1 -right-2 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-gevaar-vlak text-gevaar-op text-[0.65rem] font-medium flex items-center justify-center"
           >
             {badge > 9 ? '9+' : badge}
           </span>
@@ -76,7 +76,7 @@ export default function BottomNav() {
   const { aantal } = useOpenstaandeActies()
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 inset-x-0 bg-vlak border-t border-rand pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto flex items-center px-2">
         <Tab to="/" naam="home" badge={aantal} />
         <Tab to="/vrienden" naam="vrienden" />
@@ -84,9 +84,17 @@ export default function BottomNav() {
           <Link
             to="/nieuw"
             aria-label="Nieuwe terugvraag"
-            className="-mt-6 w-14 h-14 rounded-full bg-[#3B6D11] text-white flex items-center justify-center shadow-md"
+            className="-mt-6 w-14 h-14 rounded-full bg-merk-vlak text-merk-op flex items-center justify-center shadow-md"
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
               <path d="M12 5v14M5 12h14" />
             </svg>
           </Link>

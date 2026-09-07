@@ -11,6 +11,22 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="PayMeBack" />
     <title>PayMeBack</title>
+    <!-- Zet het thema voor de eerste tekening, anders flitst de app wit op bij
+         het opstarten in dark mode. Dit moet hier staan en niet in React: de
+         bundel laadt pas na deze regel. utils/thema.ts gebruikt dezelfde
+         sleutel en dezelfde klassenaam. -->
+    <script>
+      try {
+        var keuze = localStorage.getItem('paymeback:thema')
+        var donker =
+          keuze === 'donker' ||
+          ((keuze === null || keuze === 'systeem') &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('donker', donker)
+      } catch (e) {
+        // Geen toegang tot localStorage: dan gewoon licht.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

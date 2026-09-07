@@ -36,15 +36,18 @@ export default function TekstModal({
         placeholder={placeholder}
         value={waarde}
         onChange={(e) => setWaarde(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm mb-2"
+        className="w-full border border-rand-sterk rounded-lg px-3 py-2.5 text-sm mb-2"
       />
       <div className="flex gap-2 mt-2">
-        <button onClick={sluit} className="flex-1 border border-gray-300 rounded-lg py-2.5 text-sm">
+        <button
+          onClick={sluit}
+          className="flex-1 border border-rand-sterk rounded-lg py-2.5 text-sm"
+        >
           Annuleren
         </button>
         <button
           onClick={bevestig}
-          className="flex-1 bg-[#3B6D11] text-white rounded-lg py-2.5 text-sm font-medium"
+          className="flex-1 bg-merk-vlak text-merk-op rounded-lg py-2.5 text-sm font-medium"
         >
           Bevestigen
         </button>

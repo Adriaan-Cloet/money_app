@@ -28,15 +28,15 @@ export default function OpenstaandeActies() {
 
   return (
     <div className="mb-6">
-      <p className="text-xs font-medium text-gray-400 mb-2">Te bevestigen</p>
+      <p className="text-xs font-medium text-flauw mb-2">Te bevestigen</p>
 
-      {fout && <p className="text-sm text-red-600 mb-2">{fout}</p>}
+      {fout && <p className="text-sm text-gevaar mb-2">{fout}</p>}
 
       <ul className="space-y-2">
         {teBevestigen.map((betaling) => (
           <li
             key={betaling.betalingId}
-            className="bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            className="bg-vlak border border-rand rounded-2xl px-4 py-3"
           >
             <div className="flex items-center gap-3">
               <Avatar naam={betaling.naam} />
@@ -49,14 +49,14 @@ export default function OpenstaandeActies() {
               <button
                 onClick={() => bevestig.mutate(betaling.betalingId)}
                 disabled={bezig}
-                className="text-sm font-medium text-[#3B6D11] disabled:opacity-60"
+                className="text-sm font-medium text-merk disabled:opacity-60"
               >
                 Bevestigen
               </button>
               <button
                 onClick={() => meldFout.mutate(betaling.betalingId)}
                 disabled={bezig}
-                className="text-sm text-red-600 disabled:opacity-60"
+                className="text-sm text-gevaar disabled:opacity-60"
               >
                 Niet ontvangen
               </button>
@@ -67,7 +67,7 @@ export default function OpenstaandeActies() {
         {verzoeken.map((verzoek) => (
           <li
             key={verzoek.vriendschap_id}
-            className="bg-white border border-gray-200 rounded-2xl px-4 py-3"
+            className="bg-vlak border border-rand rounded-2xl px-4 py-3"
           >
             <div className="flex items-center gap-3">
               <Avatar naam={verzoek.gebruikersnaam} />
@@ -79,14 +79,14 @@ export default function OpenstaandeActies() {
               <button
                 onClick={() => aanvaard.mutate(verzoek.vriendschap_id)}
                 disabled={bezig}
-                className="text-sm font-medium text-[#3B6D11] disabled:opacity-60"
+                className="text-sm font-medium text-merk disabled:opacity-60"
               >
                 Accepteren
               </button>
               <button
                 onClick={() => weiger.mutate(verzoek.vriendschap_id)}
                 disabled={bezig}
-                className="text-sm text-gray-500 disabled:opacity-60"
+                className="text-sm text-zacht disabled:opacity-60"
               >
                 Weigeren
               </button>

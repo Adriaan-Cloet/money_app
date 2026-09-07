@@ -5,6 +5,12 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Het moment van bouwen, voor de versieregel in Instellingen. package.json
+  // staat nog op 0.0.0 en zegt dus niets; de bouwdatum beantwoordt wel de vraag
+  // waar het om gaat: heeft mijn telefoon de laatste versie al?
+  define: {
+    __GEBOUWD_OP__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     tailwindcss(),

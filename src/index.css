@@ -1,9 +1,80 @@
 @import 'tailwindcss';
 
+/* Dark mode hangt aan een klasse op <html>, niet aan prefers-color-scheme,
+   want de gebruiker kiest zelf in Instellingen. De keuze 'systeem' wordt in
+   utils/thema.ts vertaald naar wel of geen klasse.
+
+   `dark` wijst bewust naar dezelfde selector. Zo kan een per ongeluk getypte
+   `dark:`-klasse niet stiekem het besturingssysteem volgen in plaats van de
+   toggle. In deze codebase schrijf je `donker:`. */
+@custom-variant donker (&:where(.donker, .donker *));
+@custom-variant dark (&:where(.donker, .donker *));
+
+/* De kleuren staan hier onder een naam die zegt waar ze voor dienen, niet
+   welke kleur ze zijn. Daardoor blijft dark mode één blok met andere waarden
+   in plaats van een donkere variant op elke klasse in elk scherm.
+
+   - grond   achtergrond van een scherm
+   - vlak    een kaart of balk die op de grond ligt
+   - rand    lijn rond een kaart; rand-sterk is de zwaardere lijn van invoer
+   - tekst   gewone tekst; zacht is bijschrift, flauw is label en icoon in rust
+   - merk    het groen: als tekst, als vlak, en -op is wat erbovenop leesbaar is
+   - gevaar  het rood van verwijderen en waarschuwen, zelfde opbouw */
+@theme {
+  --color-grond: #f9fafb;
+  --color-vlak: #ffffff;
+  --color-rand: #e5e7eb;
+  --color-rand-sterk: #d1d5db;
+  --color-tekst: #111827;
+  --color-zacht: #6b7280;
+  --color-flauw: #9ca3af;
+  --color-merk: #3b6d11;
+  --color-merk-vlak: #3b6d11;
+  --color-merk-op: #ffffff;
+  --color-merk-zacht: #eaf3de;
+  --color-gevaar: #dc2626;
+  --color-gevaar-vlak: #dc2626;
+  --color-gevaar-op: #ffffff;
+}
+
+/* Het donkergroen van het licht thema is onleesbaar op een donkere grond,
+   dus daar wordt het merk een lichter groen. Op een donkere knop staat dan
+   weer donkere tekst; wit op fel groen leest slechter. */
+.donker {
+  --color-grond: #0f1211;
+  --color-vlak: #191d1b;
+  --color-rand: #2b312e;
+  --color-rand-sterk: #3b423f;
+  --color-tekst: #e9edeb;
+  --color-zacht: #9ba49f;
+  --color-flauw: #737c78;
+  --color-merk: #8fce54;
+  --color-merk-vlak: #8fce54;
+  --color-merk-op: #0f1211;
+  --color-merk-zacht: #26331a;
+  --color-gevaar: #f87171;
+  --color-gevaar-vlak: #b91c1c;
+  --color-gevaar-op: #ffffff;
+  color-scheme: dark;
+}
+
+/* Op de grond zelf, zodat het doorscrollen voorbij de pagina (de "bounce" op
+   iOS) niet ineens wit oplicht in dark mode. */
+html {
+  background-color: var(--color-grond);
+  color: var(--color-tekst);
+}
+
 /* Voorkom dat iOS inzoomt wanneer je een invoerveld aantikt (vereist >= 16px).
-   Grote bedrag-velden zetten hun grootte zelf via een inline-stijl. */
+   Grote bedrag-velden zetten hun grootte zelf via een inline-stijl.
+
+   De kleuren staan hier en niet per veld. Zonder deze regel valt een invoerveld
+   terug op wat de browser zelf tekent; met color-scheme: dark wordt dat wel
+   donker, maar in een ander grijs dan onze kaarten. */
 input,
 select,
 textarea {
   font-size: 16px;
+  background-color: var(--color-vlak);
+  color: var(--color-tekst);
 }

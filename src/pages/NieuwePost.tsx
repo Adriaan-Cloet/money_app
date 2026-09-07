@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useLokaleContacten, useMaakLokaalContact, contactFoutTekst } from '../queries/lokaleContacten'
+import {
+  useLokaleContacten,
+  useMaakLokaalContact,
+  contactFoutTekst,
+} from '../queries/lokaleContacten'
 import { useVrienden } from '../queries/vrienden'
 import { useMaakSchuldpost } from '../queries/schuldposten'
 import { databaseFoutTekst } from '../queries/fouten'
@@ -32,7 +36,8 @@ export default function NieuwePost() {
 
   const contactenLijst = contacten.data ?? []
   const vriendenLijst = vrienden.data ?? []
-  const fout = validatieFout ?? contactFoutTekst(maakContact.error) ?? databaseFoutTekst(maakPost.error)
+  const fout =
+    validatieFout ?? contactFoutTekst(maakContact.error) ?? databaseFoutTekst(maakPost.error)
 
   function isGekozen(type: Keuze['type'], id: string) {
     return keuze?.type === type && keuze.id === id
@@ -90,24 +95,24 @@ export default function NieuwePost() {
 
   const chipKlasse = (actief: boolean) =>
     `rounded-lg px-3 py-1.5 text-sm border ${
-      actief ? 'border-2 border-[#3B6D11] font-medium' : 'border-gray-300 text-gray-600'
+      actief ? 'border-2 border-merk font-medium' : 'border-rand-sterk text-zacht'
     }`
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+    <div className="min-h-screen bg-grond px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
       <div className="max-w-md mx-auto">
         <div className="relative flex items-center justify-center mb-5">
-          <button onClick={() => navigate(-1)} className="absolute left-0 text-gray-500 text-sm">
+          <button onClick={() => navigate(-1)} className="absolute left-0 text-zacht text-sm">
             &larr; Terug
           </button>
-          <h1 className="text-xl font-medium text-[#3B6D11]">Nieuwe terugvraag</h1>
+          <h1 className="text-xl font-medium text-merk">Nieuwe terugvraag</h1>
         </div>
 
         <VerbindingBanner />
 
         <form onSubmit={verstuur} className="space-y-5">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Bedrag (euro)</label>
+            <label className="block text-xs text-zacht mb-1">Bedrag (euro)</label>
             <input
               type="text"
               inputMode="decimal"
@@ -115,16 +120,16 @@ export default function NieuwePost() {
               value={bedrag}
               onChange={(e) => setBedrag(e.target.value)}
               style={{ fontSize: '1.5rem' }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-3 font-medium text-[#3B6D11]"
+              className="w-full border border-rand-sterk rounded-lg px-3 py-3 font-medium text-merk"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-2">Van wie krijg je dit terug?</label>
+            <label className="block text-xs text-zacht mb-2">Van wie krijg je dit terug?</label>
 
             {vriendenLijst.length > 0 && (
               <>
-                <p className="text-xs text-gray-400 mb-1">Vrienden</p>
+                <p className="text-xs text-flauw mb-1">Vrienden</p>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {vriendenLijst.map((vriend) => (
                     <button
@@ -140,7 +145,7 @@ export default function NieuwePost() {
               </>
             )}
 
-            <p className="text-xs text-gray-400 mb-1">Lokale contacten</p>
+            <p className="text-xs text-flauw mb-1">Lokale contacten</p>
             <div className="flex flex-wrap gap-2">
               {contactenLijst.map((contact) => (
                 <button
@@ -155,7 +160,7 @@ export default function NieuwePost() {
               <button
                 type="button"
                 onClick={() => setToonNieuwContact(true)}
-                className="rounded-lg px-3 py-1.5 text-sm border border-dashed border-gray-400 text-gray-600"
+                className="rounded-lg px-3 py-1.5 text-sm border border-dashed border-rand-sterk text-zacht"
               >
                 + Nieuw
               </button>
@@ -170,13 +175,13 @@ export default function NieuwePost() {
                   value={nieuwContactNaam}
                   onChange={(e) => setNieuwContactNaam(e.target.value)}
                   onKeyDown={bijToets}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  className="flex-1 border border-rand-sterk rounded-lg px-3 py-2 text-sm"
                 />
                 <button
                   type="button"
                   onClick={voegContactToe}
                   disabled={maakContact.isPending}
-                  className="bg-[#3B6D11] text-white rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-60"
+                  className="bg-merk-vlak text-merk-op rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-60"
                 >
                   Toevoegen
                 </button>
@@ -185,32 +190,32 @@ export default function NieuwePost() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Omschrijving</label>
+            <label className="block text-xs text-zacht mb-1">Omschrijving</label>
             <input
               type="text"
               placeholder="bv. boodschappen Colruyt"
               value={omschrijving}
               onChange={(e) => setOmschrijving(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+              className="w-full border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Datum</label>
+            <label className="block text-xs text-zacht mb-1">Datum</label>
             <input
               type="date"
               value={datum}
               onChange={(e) => setDatum(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+              className="w-full border border-rand-sterk rounded-lg px-3 py-2.5 text-sm"
             />
           </div>
 
-          {fout && <p className="text-sm text-red-600">{fout}</p>}
+          {fout && <p className="text-sm text-gevaar">{fout}</p>}
 
           <button
             type="submit"
             disabled={maakPost.isPending}
-            className="w-full bg-[#3B6D11] text-white rounded-lg py-3 text-sm font-medium disabled:opacity-60"
+            className="w-full bg-merk-vlak text-merk-op rounded-lg py-3 text-sm font-medium disabled:opacity-60"
           >
             {maakPost.isPending ? 'Bezig...' : 'Terugvraag bewaren'}
           </button>

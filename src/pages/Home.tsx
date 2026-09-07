@@ -73,33 +73,31 @@ export default function Home() {
   return (
     <div>
       <div className="mb-6">
-        <p className="text-sm text-gray-500">Hallo</p>
-        <h1 className="text-2xl font-medium text-[#3B6D11]">
-          {profiel.data?.gebruikersnaam ?? ''}
-        </h1>
+        <p className="text-sm text-zacht">Hallo</p>
+        <h1 className="text-2xl font-medium text-merk">{profiel.data?.gebruikersnaam ?? ''}</h1>
       </div>
 
       <OpenstaandeActies />
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-white border border-gray-200 rounded-2xl p-4">
-          <p className="text-xs text-gray-500">Jij krijgt</p>
-          <p className="text-2xl font-medium text-[#3B6D11] mt-1">{formatEuro(totaalTeKrijgen)}</p>
+        <div className="bg-vlak border border-rand rounded-2xl p-4">
+          <p className="text-xs text-zacht">Jij krijgt</p>
+          <p className="text-2xl font-medium text-merk mt-1">{formatEuro(totaalTeKrijgen)}</p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl p-4">
-          <p className="text-xs text-gray-500">Jij moet</p>
-          <p className="text-2xl font-medium text-red-600 mt-1">{formatEuro(totaalTeBetalen)}</p>
+        <div className="bg-vlak border border-rand rounded-2xl p-4">
+          <p className="text-xs text-zacht">Jij moet</p>
+          <p className="text-2xl font-medium text-gevaar mt-1">{formatEuro(totaalTeBetalen)}</p>
         </div>
       </div>
 
-      <p className="text-xs font-medium text-gray-400 mb-2">Per persoon</p>
+      <p className="text-xs font-medium text-flauw mb-2">Per persoon</p>
 
       {legeTekst ? (
-        <p className="text-sm text-gray-500">{legeTekst}</p>
+        <p className="text-sm text-zacht">{legeTekst}</p>
       ) : regels.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center">
-          <p className="text-sm text-gray-500">Nog niets openstaand.</p>
-          <p className="text-sm text-gray-400 mt-1">Tik op + om een terugvraag toe te voegen.</p>
+        <div className="bg-vlak border border-rand rounded-2xl p-6 text-center">
+          <p className="text-sm text-zacht">Nog niets openstaand.</p>
+          <p className="text-sm text-flauw mt-1">Tik op + om een terugvraag toe te voegen.</p>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -111,18 +109,16 @@ export default function Home() {
               <li key={`${regel.type}:${regel.id}`}>
                 <Link
                   to={regel.type === 'contact' ? `/contact/${regel.id}` : `/vriend/${regel.id}`}
-                  className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
+                  className="flex items-center gap-3 bg-vlak border border-rand rounded-2xl px-4 py-3"
                 >
                   <Avatar naam={regel.naam} />
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-medium truncate">{regel.naam}</span>
-                    {toelichting && (
-                      <span className="block text-xs text-gray-500">{toelichting}</span>
-                    )}
+                    {toelichting && <span className="block text-xs text-zacht">{toelichting}</span>}
                   </span>
                   <span
                     className={`text-sm font-medium ${
-                      vereffend ? 'text-gray-400' : krijgt ? 'text-[#3B6D11]' : 'text-red-600'
+                      vereffend ? 'text-flauw' : krijgt ? 'text-merk' : 'text-gevaar'
                     }`}
                   >
                     {vereffend ? '' : krijgt ? '+ ' : '- '}

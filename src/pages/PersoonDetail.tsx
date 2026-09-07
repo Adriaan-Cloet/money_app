@@ -24,17 +24,17 @@ function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder: () =>
   const magWeg = magPostWeg(post)
   const rest = post.bedrag - post.gedekt_bedrag
   return (
-    <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
+    <li className="bg-vlak border border-rand rounded-2xl px-4 py-3">
       <div className="flex items-baseline justify-between">
-        <span className={`text-sm font-medium ${afgehandeld ? 'text-gray-400 line-through' : ''}`}>
+        <span className={`text-sm font-medium ${afgehandeld ? 'text-flauw line-through' : ''}`}>
           {post.omschrijving || 'Geen omschrijving'}
         </span>
-        <span className={`text-sm font-medium ${afgehandeld ? 'text-gray-400' : 'text-[#3B6D11]'}`}>
+        <span className={`text-sm font-medium ${afgehandeld ? 'text-flauw' : 'text-merk'}`}>
           {formatEuro(post.bedrag)}
         </span>
       </div>
       <div className="mt-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-flauw">
           <StatusPill status={post.status} />
           <span>{formatDatum(post.datum)}</span>
           {post.status === 'deels_betaald' && <span>nog {formatEuro(rest)}</span>}
@@ -42,12 +42,12 @@ function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder: () =>
         <button
           onClick={onVerwijder}
           disabled={!magWeg}
-          className={`text-sm ${magWeg ? 'text-red-600' : 'text-gray-400'}`}
+          className={`text-sm ${magWeg ? 'text-gevaar' : 'text-flauw'}`}
         >
           Verwijderen
         </button>
       </div>
-      {!magWeg && <p className="mt-2 text-xs text-gray-400">{POST_GEBLOKKEERD}</p>}
+      {!magWeg && <p className="mt-2 text-xs text-flauw">{POST_GEBLOKKEERD}</p>}
     </li>
   )
 }
@@ -85,43 +85,41 @@ export default function PersoonDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
+    <div className="min-h-screen bg-grond px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3 mb-5">
-          <button onClick={() => navigate(-1)} className="text-gray-500 text-sm">
+          <button onClick={() => navigate(-1)} className="text-zacht text-sm">
             &larr; Terug
           </button>
-          <h1 className="text-xl font-medium text-[#3B6D11]">{contact.data?.naam ?? 'Persoon'}</h1>
+          <h1 className="text-xl font-medium text-merk">{contact.data?.naam ?? 'Persoon'}</h1>
         </div>
 
         <VerbindingBanner />
 
-        {fout && <p className="text-sm text-red-600 mb-4">{fout}</p>}
+        {fout && <p className="text-sm text-gevaar mb-4">{fout}</p>}
 
         {legeTekst ? (
-          <p className="text-sm text-gray-500">{legeTekst}</p>
+          <p className="text-sm text-zacht">{legeTekst}</p>
         ) : (
           <>
-            <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 text-center">
-              <p className="text-xs text-gray-500">Saldo met {contact.data?.naam}</p>
-              <p className="text-2xl font-medium text-[#3B6D11] mt-1">
-                Jij krijgt {formatEuro(saldo)}
-              </p>
+            <div className="bg-vlak border border-rand rounded-2xl p-4 mb-4 text-center">
+              <p className="text-xs text-zacht">Saldo met {contact.data?.naam}</p>
+              <p className="text-2xl font-medium text-merk mt-1">Jij krijgt {formatEuro(saldo)}</p>
             </div>
 
             {open.length > 0 && (
               <button
                 onClick={() => setBetaalOpen(true)}
                 disabled={registreer.isPending}
-                className="w-full bg-[#3B6D11] text-white rounded-2xl py-3 text-sm font-medium mb-6 disabled:opacity-60"
+                className="w-full bg-merk-vlak text-merk-op rounded-2xl py-3 text-sm font-medium mb-6 disabled:opacity-60"
               >
                 {contact.data?.naam ?? 'Contact'} heeft betaald
               </button>
             )}
 
-            <p className="text-xs font-medium text-gray-400 mb-2">Openstaand</p>
+            <p className="text-xs font-medium text-flauw mb-2">Openstaand</p>
             {open.length === 0 ? (
-              <p className="text-sm text-gray-500 mb-6">Niets openstaand.</p>
+              <p className="text-sm text-zacht mb-6">Niets openstaand.</p>
             ) : (
               <ul className="space-y-2 mb-6">
                 {open.map((post) => (
@@ -132,7 +130,7 @@ export default function PersoonDetail() {
 
             {afgehandeld.length > 0 && (
               <>
-                <p className="text-xs font-medium text-gray-400 mb-2">Afgehandeld</p>
+                <p className="text-xs font-medium text-flauw mb-2">Afgehandeld</p>
                 <ul className="space-y-2">
                   {afgehandeld.map((post) => (
                     <PostRegel

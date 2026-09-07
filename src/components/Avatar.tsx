@@ -11,7 +11,7 @@ export default function Avatar({ naam, klein = false }: { naam: string; klein?: 
   const maat = klein ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
   return (
     <div
-      className={`${maat} shrink-0 rounded-full bg-[#EAF3DE] text-[#3B6D11] font-medium flex items-center justify-center`}
+      className={`${maat} shrink-0 rounded-full bg-merk-zacht text-merk font-medium flex items-center justify-center`}
     >
       {initialen}
     </div>

@@ -1,4 +1,5 @@
 import { GeenVerbindingFout, isOnbereikbaar } from './verbinding'
+import { vertaalAuthFout } from '../services/authFouten'
 
 // Twee foutgevallen zijn op elk scherm hetzelfde: je bent offline, of de server
 // antwoordt niet. Die staan hier een keer, zodat elk domein enkel nog zijn
@@ -37,4 +38,14 @@ export const ALGEMENE_FOUT = 'Er ging iets mis. Probeer het opnieuw.'
 export function databaseFoutTekst(fout: unknown): string | null {
   if (!fout) return null
   return verbindingFoutTekst(fout) ?? foutBoodschap(fout) ?? ALGEMENE_FOUT
+}
+
+// Voor de authacties (e-mail en wachtwoord wijzigen). Eerst de twee
+// verbindingsgevallen, dan de vertaling van de authcode.
+export function authFoutTekst(fout: unknown): string | null {
+  if (!fout) return null
+  return (
+    verbindingFoutTekst(fout) ??
+    vertaalAuthFout({ code: foutCode(fout), message: foutBoodschap(fout) ?? '' })
+  )
 }

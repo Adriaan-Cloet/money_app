@@ -1,5 +1,3 @@
-import type { AuthError } from '@supabase/supabase-js'
-
 // Vertaalt Supabase-authfouten naar nette Nederlandse meldingen.
 // We kijken eerst naar de foutcode (stabiel), met de tekst als terugval.
 const perCode: Record<string, string> = {
@@ -13,10 +11,13 @@ const perCode: Record<string, string> = {
   validation_failed: 'Controleer je e-mailadres en wachtwoord.',
 }
 
-export function vertaalAuthFout(error: AuthError): string {
+// Neemt bewust geen AuthError maar de twee velden die het leest. Een fout van
+// supabase-js komt niet altijd als klasse-instantie binnen (zie de les uit
+// US-025), en zo kan ook queries/fouten.ts deze vertaling gebruiken.
+export function vertaalAuthFout(error: { code?: string | null; message?: string }): string {
   if (error.code && perCode[error.code]) return perCode[error.code]
 
-  const tekst = error.message.toLowerCase()
+  const tekst = (error.message ?? '').toLowerCase()
   if (tekst.includes('invalid login credentials')) return perCode.invalid_credentials
   if (tekst.includes('already registered') || tekst.includes('already exists'))
     return perCode.user_already_exists

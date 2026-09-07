@@ -10,3 +10,11 @@ export const formatDatum = (datum: string) => datum.split('-').reverse().join('-
 // Van een tijdstip in milliseconden naar HH:MM, voor "laatst bijgewerkt om".
 export const formatTijd = (tijdstip: number) =>
   new Date(tijdstip).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' })
+
+// Van een ISO-tijdstip naar "7 september 2026", voor de versieregel.
+export const formatLangeDatum = (isoTijdstip: string) =>
+  new Date(isoTijdstip).toLocaleDateString('nl-BE', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
