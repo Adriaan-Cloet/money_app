@@ -17,7 +17,7 @@ import {
   useMaakBetaling,
   useRegistreerVriendbetaling,
   useBevestigBetaling,
-  useZetBetalingStatus,
+  useMeldBetalingFout,
 } from '../queries/betalingen'
 import { legeStatusTekst } from '../queries/status'
 import { databaseFoutTekst } from '../queries/fouten'
@@ -57,13 +57,22 @@ function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
   )
 }
 
-function BetalingRegel({ betaling, acties }: { betaling: Betaling; acties?: ReactNode }) {
+function BetalingRegel({
+  betaling,
+  toelichting,
+  acties,
+}: {
+  betaling: Betaling
+  toelichting?: string
+  acties?: ReactNode
+}) {
   return (
     <li className="bg-white border border-gray-200 rounded-2xl px-4 py-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{formatEuro(betaling.bedrag)}</span>
         <StatusPill status={betaling.status} />
       </div>
+      {toelichting && <p className="mt-1 text-xs text-gray-500">{toelichting}</p>}
       {acties && <div className="mt-2 flex gap-3">{acties}</div>}
     </li>
   )
@@ -90,7 +99,7 @@ export default function VriendDetail() {
   const betaal = useMaakBetaling()
   const ontvang = useRegistreerVriendbetaling()
   const bevestig = useBevestigBetaling()
-  const zetStatus = useZetBetalingStatus()
+  const meldFout = useMeldBetalingFout()
 
   // Alle vier de bronnen zijn nodig voor het saldo. Mist er een, dan toont
   // legeStatusTekst waarom in plaats van een verkeerd bedrag.
@@ -112,7 +121,7 @@ export default function VriendDetail() {
 
   const naam = vrienden.data?.find((vriend) => vriend.gebruiker_id === id)?.gebruikersnaam ?? 'Vriend'
 
-  const mutaties = [weiger, heropen, verwijder, betaal, ontvang, bevestig, zetStatus]
+  const mutaties = [weiger, heropen, verwijder, betaal, ontvang, bevestig, meldFout]
   const fout = databaseFoutTekst(mutaties.map((m) => m.error).find((f) => f !== null) ?? null)
   const bezig = mutaties.some((m) => m.isPending)
 
@@ -239,18 +248,7 @@ export default function VriendDetail() {
                               Bevestigen
                             </button>
                             <button
-                              onClick={() =>
-                                zetStatus.mutate({ betalingId: betaling.id, status: 'wacht' })
-                              }
-                              disabled={bezig}
-                              className="text-sm text-gray-500 disabled:opacity-60"
-                            >
-                              Wachten
-                            </button>
-                            <button
-                              onClick={() =>
-                                zetStatus.mutate({ betalingId: betaling.id, status: 'fout' })
-                              }
+                              onClick={() => meldFout.mutate(betaling.id)}
                               disabled={bezig}
                               className="text-sm text-red-600 disabled:opacity-60"
                             >
@@ -306,7 +304,15 @@ export default function VriendDetail() {
                 <p className="text-xs font-medium text-gray-400 mb-2">Jouw gemelde betalingen</p>
                 <ul className="space-y-2">
                   {uitgaand.map((betaling) => (
-                    <BetalingRegel key={betaling.id} betaling={betaling} />
+                    <BetalingRegel
+                      key={betaling.id}
+                      betaling={betaling}
+                      toelichting={
+                        betaling.status === 'gemeld'
+                          ? `Gemeld, wacht op bevestiging van ${naam}`
+                          : undefined
+                      }
+                    />
                   ))}
                 </ul>
               </div>

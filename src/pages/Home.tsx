@@ -7,8 +7,27 @@ import { usePostenAlsSchuldeiser, usePostenAlsSchuldenaar } from '../queries/sch
 import { useMijnBetalingen } from '../queries/betalingen'
 import { legeStatusTekst } from '../queries/status'
 import Avatar from '../components/Avatar'
+import OpenstaandeActies from '../components/OpenstaandeActies'
 import { formatEuro } from '../utils/formatteer'
-import { regelsPerPersoon, totaalKrijgt, totaalMoet } from '../services/verrekening'
+import {
+  regelsPerPersoon,
+  totaalKrijgt,
+  totaalMoet,
+  isVereffend,
+  type Regel,
+} from '../services/verrekening'
+
+// Waarom er iets aan deze regel hangt. Zonder dit lijkt een saldo van nul dat
+// toch blijft staan, of een bedrag dat niet zakt na een melding, een fout.
+function regelToelichting(regel: Regel): string | null {
+  if (regel.teBevestigen > 0) {
+    return regel.teBevestigen === 1
+      ? '1 betaling te bevestigen'
+      : `${regel.teBevestigen} betalingen te bevestigen`
+  }
+  if (regel.wachtOpBevestiging) return 'Gemeld, wacht op bevestiging'
+  return null
+}
 
 export default function Home() {
   const mij = useMij()
@@ -60,6 +79,8 @@ export default function Home() {
         </h1>
       </div>
 
+      <OpenstaandeActies />
+
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="bg-white border border-gray-200 rounded-2xl p-4">
           <p className="text-xs text-gray-500">Jij krijgt</p>
@@ -83,7 +104,9 @@ export default function Home() {
       ) : (
         <ul className="space-y-2">
           {regels.map((regel) => {
+            const vereffend = isVereffend(regel)
             const krijgt = regel.bedrag > 0
+            const toelichting = regelToelichting(regel)
             return (
               <li key={`${regel.type}:${regel.id}`}>
                 <Link
@@ -91,11 +114,18 @@ export default function Home() {
                   className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
                 >
                   <Avatar naam={regel.naam} />
-                  <span className="flex-1 text-sm font-medium">{regel.naam}</span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium truncate">{regel.naam}</span>
+                    {toelichting && (
+                      <span className="block text-xs text-gray-500">{toelichting}</span>
+                    )}
+                  </span>
                   <span
-                    className={`text-sm font-medium ${krijgt ? 'text-[#3B6D11]' : 'text-red-600'}`}
+                    className={`text-sm font-medium ${
+                      vereffend ? 'text-gray-400' : krijgt ? 'text-[#3B6D11]' : 'text-red-600'
+                    }`}
                   >
-                    {krijgt ? '+ ' : '- '}
+                    {vereffend ? '' : krijgt ? '+ ' : '- '}
                     {formatEuro(regel.bedrag)}
                   </span>
                 </Link>

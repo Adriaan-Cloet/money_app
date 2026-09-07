@@ -57,7 +57,8 @@ export async function registreerVriendbetaling(vriendId: string, bedrag: number)
   return supabase.rpc('registreer_vriendbetaling', { p_vriend_id: vriendId, p_bedrag: bedrag })
 }
 
-// Ontvanger zet een gemelde betaling op 'wacht' of 'fout' (RLS: enkel de ontvanger).
-export async function zetBetalingStatus(betalingId: string, status: 'wacht' | 'fout') {
-  return supabase.from('betalingen').update({ status }).eq('id', betalingId)
+// Ontvanger meldt dat een betaling niet klopt (RLS: enkel de ontvanger).
+// Het bedrag telt daarna niet meer mee; de betaler moet het oplossen.
+export async function meldBetalingFout(betalingId: string) {
+  return supabase.from('betalingen').update({ status: 'fout' }).eq('id', betalingId)
 }

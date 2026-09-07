@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink, Link } from 'react-router-dom'
+import { useOpenstaandeActies } from '../queries/acties'
 
 const paden: Record<string, ReactNode> = {
   home: (
@@ -44,7 +45,7 @@ function Icon({ naam }: { naam: string }) {
   )
 }
 
-function Tab({ to, naam }: { to: string; naam: string }) {
+function Tab({ to, naam, badge = 0 }: { to: string; naam: string; badge?: number }) {
   return (
     <NavLink
       to={to}
@@ -53,16 +54,31 @@ function Tab({ to, naam }: { to: string; naam: string }) {
         `flex-1 flex justify-center py-3 ${isActive ? 'text-[#3B6D11]' : 'text-gray-400'}`
       }
     >
-      <Icon naam={naam} />
+      <span className="relative">
+        <Icon naam={naam} />
+        {badge > 0 && (
+          <span
+            aria-label={`${badge} openstaande acties`}
+            className="absolute -top-1 -right-2 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-600 text-white text-[0.65rem] font-medium flex items-center justify-center"
+          >
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
+      </span>
     </NavLink>
   )
 }
 
 export default function BottomNav() {
+  // De badge staat op home, want daar staat het blok "Te bevestigen" met
+  // dezelfde rijen. Hij telt gemelde betalingen en vriendschapsverzoeken samen
+  // en verdwijnt zodra alles afgehandeld is.
+  const { aantal } = useOpenstaandeActies()
+
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-md mx-auto flex items-center px-2">
-        <Tab to="/" naam="home" />
+        <Tab to="/" naam="home" badge={aantal} />
         <Tab to="/vrienden" naam="vrienden" />
         <div className="flex-1 flex justify-center">
           <Link

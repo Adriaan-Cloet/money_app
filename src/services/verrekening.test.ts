@@ -8,9 +8,11 @@ import {
   regelsPerPersoon,
   totaalKrijgt,
   totaalMoet,
+  isVereffend,
   type PostVoorVerrekening,
   type BetalingVoorVerrekening,
   type PostVoorNetting,
+  type Regel,
 } from './verrekening'
 
 // Korte hulpfuncties zodat elke test alleen benoemt wat er toe doet.
@@ -72,9 +74,8 @@ describe('somOpenstaand', () => {
 })
 
 describe('isOnbevestigd', () => {
-  it('telt gemeld en wacht als onbevestigd', () => {
+  it('telt een gemelde betaling als onbevestigd', () => {
     expect(isOnbevestigd(betaling({ status: 'gemeld' }))).toBe(true)
-    expect(isOnbevestigd(betaling({ status: 'wacht' }))).toBe(true)
   })
 
   it('telt bevestigd en fout niet als onbevestigd', () => {
@@ -84,10 +85,10 @@ describe('isOnbevestigd', () => {
 })
 
 describe('somOnbevestigd', () => {
-  it('telt enkel de gemelde en wachtende betalingen op', () => {
+  it('telt enkel de gemelde betalingen op', () => {
     const betalingen = [
       betaling({ status: 'gemeld', bedrag: 10 }),
-      betaling({ status: 'wacht', bedrag: 5 }),
+      betaling({ status: 'gemeld', bedrag: 5 }),
       betaling({ status: 'bevestigd', bedrag: 100 }),
       betaling({ status: 'fout', bedrag: 50 }),
     ]
@@ -151,9 +152,36 @@ describe('saldoMetVriend', () => {
     expect(saldo).toBe(-30)
   })
 
-  // Bewust geen test op onbevestigde betalingen die jij moet ontvangen.
-  // Dat gedrag is nu fout en US-021 draait het om; die story schrijft de test
-  // eerst, ziet hem rood staan en haalt dan de regel weg.
+  // De kern van US-021: een melding van de tegenpartij is nog geen betaling.
+  // Zolang jij niet bevestigd hebt, blijft de schuld voor jou volledig open.
+  it('laat je saldo ongemoeid bij een betaling die zij meldden en jij nog niet bevestigde', () => {
+    const saldo = saldoMetVriend({
+      zijMoetenJou: [post({ bedrag: 50 })],
+      jijMoetHen: [],
+      uitgaand: [],
+      inkomend: [betaling({ status: 'gemeld', bedrag: 50 })],
+    })
+    expect(saldo).toBe(50)
+  })
+
+  it('verrekent een melding enkel bij de betaler, niet aan beide kanten', () => {
+    const invoer = {
+      zijMoetenJou: [post({ bedrag: 50 })],
+      jijMoetHen: [post({ bedrag: 50 })],
+    }
+    const jijMeldde = saldoMetVriend({
+      ...invoer,
+      uitgaand: [betaling({ status: 'gemeld', bedrag: 50 })],
+      inkomend: [],
+    })
+    const zijMeldden = saldoMetVriend({
+      ...invoer,
+      uitgaand: [],
+      inkomend: [betaling({ status: 'gemeld', bedrag: 50 })],
+    })
+    expect(jijMeldde).toBe(50)
+    expect(zijMeldden).toBe(0)
+  })
 })
 
 const MIJ = 'mij'
@@ -169,6 +197,14 @@ const nettingPost = (p: Partial<PostVoorNetting>): PostVoorNetting => ({
   schuldenaar_contact_id: null,
   schuldenaar_gebruiker_id: null,
   ...p,
+})
+
+// Elke regel heeft ook de actievelden. Een test die er niets mee te maken heeft
+// vult ze via deze helper met hun rusttoestand.
+const regel = (r: Partial<Regel> & Pick<Regel, 'type' | 'id' | 'naam' | 'bedrag'>): Regel => ({
+  teBevestigen: 0,
+  wachtOpBevestiging: false,
+  ...r,
 })
 
 const leeg = {
@@ -187,7 +223,7 @@ describe('regelsPerPersoon', () => {
       contacten: [contact('c1', 'Jan')],
       alsSchuldeiser: [nettingPost({ bedrag: 25, schuldenaar_contact_id: 'c1' })],
     })
-    expect(regels).toEqual([{ type: 'contact', id: 'c1', naam: 'Jan', bedrag: 25 }])
+    expect(regels).toEqual([regel({ type: 'contact', id: 'c1', naam: 'Jan', bedrag: 25 })])
   })
 
   it('maakt een negatieve regel voor een vriend aan wie jij geld moet', () => {
@@ -196,7 +232,7 @@ describe('regelsPerPersoon', () => {
       vrienden: [vriend(ANNA, 'Anna')],
       alsSchuldenaar: [nettingPost({ bedrag: 40, schuldeiser_id: ANNA })],
     })
-    expect(regels).toEqual([{ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: -40 }])
+    expect(regels).toEqual([regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: -40 })])
   })
 
   it('saldeert beide richtingen met dezelfde vriend tot één regel', () => {
@@ -206,7 +242,7 @@ describe('regelsPerPersoon', () => {
       alsSchuldeiser: [nettingPost({ bedrag: 50, schuldenaar_gebruiker_id: ANNA })],
       alsSchuldenaar: [nettingPost({ bedrag: 30, schuldeiser_id: ANNA })],
     })
-    expect(regels).toEqual([{ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: 20 }])
+    expect(regels).toEqual([regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: 20 })])
   })
 
   it('laat iemand weg zodra beide richtingen elkaar precies opheffen', () => {
@@ -263,7 +299,9 @@ describe('regelsPerPersoon', () => {
         { status: 'gemeld', bedrag: 20, betaler_gebruiker_id: MIJ, ontvanger_id: ANNA },
       ],
     })
-    expect(regels).toEqual([{ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: -30 }])
+    expect(regels).toEqual([
+      regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: -30, wachtOpBevestiging: true }),
+    ])
   })
 
   it('negeert bevestigde betalingen, want die zitten al in gedekt_bedrag', () => {
@@ -275,7 +313,7 @@ describe('regelsPerPersoon', () => {
         { status: 'bevestigd', bedrag: 20, betaler_gebruiker_id: MIJ, ontvanger_id: ANNA },
       ],
     })
-    expect(regels).toEqual([{ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: -50 }])
+    expect(regels).toEqual([regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: -50 })])
   })
 
   it('negeert geweigerde posten volledig', () => {
@@ -289,15 +327,80 @@ describe('regelsPerPersoon', () => {
     expect(regels).toEqual([])
   })
 
-  // Bewust geen test op een onbevestigde betaling die jij moet ontvangen.
-  // Dat is de bug die US-021 rechtzet: de vriend verdwijnt nu van home.
+  it('houdt de schuld volledig open zolang jij hun melding niet bevestigd hebt', () => {
+    const regels = regelsPerPersoon({
+      ...leeg,
+      vrienden: [vriend(ANNA, 'Anna')],
+      alsSchuldeiser: [nettingPost({ bedrag: 50, schuldenaar_gebruiker_id: ANNA })],
+      betalingen: [
+        { status: 'gemeld', bedrag: 50, betaler_gebruiker_id: ANNA, ontvanger_id: MIJ },
+      ],
+    })
+    expect(regels).toEqual([
+      regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: 50, teBevestigen: 1 }),
+    ])
+  })
+
+  it('houdt jouw eigen melding op home staan, ook al valt het saldo op nul', () => {
+    const regels = regelsPerPersoon({
+      ...leeg,
+      vrienden: [vriend(ANNA, 'Anna')],
+      alsSchuldenaar: [nettingPost({ bedrag: 50, schuldeiser_id: ANNA })],
+      betalingen: [
+        { status: 'gemeld', bedrag: 50, betaler_gebruiker_id: MIJ, ontvanger_id: ANNA },
+      ],
+    })
+    expect(regels).toEqual([
+      regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: 0, wachtOpBevestiging: true }),
+    ])
+  })
+
+  it('telt meerdere meldingen van dezelfde persoon samen', () => {
+    const regels = regelsPerPersoon({
+      ...leeg,
+      vrienden: [vriend(ANNA, 'Anna')],
+      alsSchuldeiser: [nettingPost({ bedrag: 80, schuldenaar_gebruiker_id: ANNA })],
+      betalingen: [
+        { status: 'gemeld', bedrag: 30, betaler_gebruiker_id: ANNA, ontvanger_id: MIJ },
+        { status: 'gemeld', bedrag: 20, betaler_gebruiker_id: ANNA, ontvanger_id: MIJ },
+        { status: 'fout', bedrag: 10, betaler_gebruiker_id: ANNA, ontvanger_id: MIJ },
+      ],
+    })
+    expect(regels).toEqual([
+      regel({ type: 'vriend', id: ANNA, naam: 'Anna', bedrag: 80, teBevestigen: 2 }),
+    ])
+  })
+
+  it('laat iemand zonder saldo en zonder actie gewoon weg', () => {
+    const regels = regelsPerPersoon({
+      ...leeg,
+      vrienden: [vriend(ANNA, 'Anna')],
+      alsSchuldeiser: [nettingPost({ bedrag: 30, schuldenaar_gebruiker_id: ANNA })],
+      alsSchuldenaar: [nettingPost({ bedrag: 30, schuldeiser_id: ANNA })],
+      betalingen: [
+        { status: 'bevestigd', bedrag: 10, betaler_gebruiker_id: ANNA, ontvanger_id: MIJ },
+      ],
+    })
+    expect(regels).toEqual([])
+  })
+})
+
+describe('isVereffend', () => {
+  it('noemt een saldo van nul vereffend', () => {
+    expect(isVereffend(regel({ type: 'vriend', id: 'a', naam: 'A', bedrag: 0 }))).toBe(true)
+  })
+
+  it('noemt een openstaand bedrag niet vereffend, in beide richtingen', () => {
+    expect(isVereffend(regel({ type: 'vriend', id: 'a', naam: 'A', bedrag: 0.5 }))).toBe(false)
+    expect(isVereffend(regel({ type: 'vriend', id: 'a', naam: 'A', bedrag: -0.5 }))).toBe(false)
+  })
 })
 
 describe('totaalKrijgt en totaalMoet', () => {
   const regels = [
-    { type: 'vriend' as const, id: 'a', naam: 'A', bedrag: 30 },
-    { type: 'vriend' as const, id: 'b', naam: 'B', bedrag: 20 },
-    { type: 'contact' as const, id: 'c', naam: 'C', bedrag: -15 },
+    regel({ type: 'vriend', id: 'a', naam: 'A', bedrag: 30 }),
+    regel({ type: 'vriend', id: 'b', naam: 'B', bedrag: 20 }),
+    regel({ type: 'contact', id: 'c', naam: 'C', bedrag: -15 }),
   ]
 
   it('telt enkel de positieve regels op', () => {

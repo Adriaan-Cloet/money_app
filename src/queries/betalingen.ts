@@ -5,7 +5,7 @@ import {
   haalUitgaandeBetalingen,
   maakBetaling,
   bevestigBetaling,
-  zetBetalingStatus,
+  meldBetalingFout,
   registreerContactbetaling,
   registreerVriendbetaling,
 } from '../services/betalingen'
@@ -72,11 +72,8 @@ export function useBevestigBetaling() {
   return useBetalingMutatie((betalingId: string) => ontpak(bevestigBetaling(betalingId)))
 }
 
-export function useZetBetalingStatus() {
-  return useBetalingMutatie(
-    ({ betalingId, status }: { betalingId: string; status: 'wacht' | 'fout' }) =>
-      ontpak(zetBetalingStatus(betalingId, status)),
-  )
+export function useMeldBetalingFout() {
+  return useBetalingMutatie((betalingId: string) => ontpak(meldBetalingFout(betalingId)))
 }
 
 // De schuldeiser registreert zelf dat er betaald is. Auto-bevestigd, dus meteen
