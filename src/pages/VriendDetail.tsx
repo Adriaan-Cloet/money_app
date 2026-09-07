@@ -21,6 +21,7 @@ import {
   useVerwijderBetaling,
 } from '../queries/betalingen'
 import { useMij } from '../queries/mij'
+import { useProfiel } from '../queries/gebruikers'
 import { legeStatusTekst } from '../queries/status'
 import { databaseFoutTekst } from '../queries/fouten'
 import StatusPill from '../components/StatusPill'
@@ -28,6 +29,8 @@ import BedragModal from '../components/BedragModal'
 import TekstModal from '../components/TekstModal'
 import BevestigModal from '../components/BevestigModal'
 import VerbindingBanner from '../components/VerbindingBanner'
+import IbanKaart from '../components/IbanKaart'
+import QrModal from '../components/QrModal'
 import { formatEuro, formatDatum } from '../utils/formatteer'
 import { openstaand, saldoMetVriend } from '../services/verrekening'
 import { magPostWeg, magBetalingWeg, POST_GEBLOKKEERD } from '../services/verwijderen'
@@ -99,8 +102,13 @@ export default function VriendDetail() {
   const [heropenId, setHeropenId] = useState<string | null>(null)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
   const [teVerwijderenBetaling, setTeVerwijderenBetaling] = useState<Betaling | null>(null)
+  const [qrOpen, setQrOpen] = useState(false)
 
   const vrienden = useVrienden()
+  // Voor de QR die je laat scannen: dat is jouw eigen rekeningnummer, niet dat
+  // van de vriend. Je kan je eigen scherm niet scannen, dus andersom heeft het
+  // geen zin.
+  const profiel = useProfiel()
   const postenVanVriend = usePostenVanVriend(id)
   const postenAlsSchuldenaar = usePostenAlsSchuldenaar()
   const inkomendeBetalingen = useInkomendeBetalingen(id)
@@ -129,8 +137,8 @@ export default function VriendDetail() {
   const inkomend = inkomendeBetalingen.data ?? []
   const uitgaand = uitgaandeBetalingen.data ?? []
 
-  const naam =
-    vrienden.data?.find((vriend) => vriend.gebruiker_id === id)?.gebruikersnaam ?? 'Vriend'
+  const vriend = vrienden.data?.find((rij) => rij.gebruiker_id === id)
+  const naam = vriend?.gebruikersnaam ?? 'Vriend'
 
   const mutaties = [
     weiger,
@@ -147,6 +155,9 @@ export default function VriendDetail() {
 
   const saldo = saldoMetVriend({ zijMoetenJou, jijMoetHen, uitgaand, inkomend })
   const jijMoetIets = jijMoetHen.some((post) => openstaand(post) > 0)
+  // Voorstel voor de QR: wat er netto nog naar jou moet komen. Aanpasbaar in de
+  // modal zelf, want vaak spreek je een deel af.
+  const teOntvangen = Math.max(saldo, 0)
   const zijMoetenIets = zijMoetenJou.some((post) => openstaand(post) > 0)
 
   function onHeropen(uitleg: string) {
@@ -207,16 +218,21 @@ export default function VriendDetail() {
               </p>
             </div>
 
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between gap-3 mb-2">
               <p className="text-xs font-medium text-flauw">Zij moeten jou</p>
               {zijMoetenIets && (
-                <button
-                  onClick={() => setOntvangOpen(true)}
-                  disabled={bezig}
-                  className="text-sm font-medium text-merk disabled:opacity-60"
-                >
-                  {naam} heeft betaald
-                </button>
+                <div className="flex gap-3">
+                  <button onClick={() => setQrOpen(true)} className="text-sm font-medium text-merk">
+                    Laat scannen
+                  </button>
+                  <button
+                    onClick={() => setOntvangOpen(true)}
+                    disabled={bezig}
+                    className="text-sm font-medium text-merk disabled:opacity-60"
+                  >
+                    {naam} heeft betaald
+                  </button>
+                </div>
               )}
             </div>
             {zijMoetenJou.length === 0 ? (
@@ -301,6 +317,15 @@ export default function VriendDetail() {
                 </button>
               )}
             </div>
+            {jijMoetIets && vriend?.iban && (
+              <div className="mb-2">
+                <IbanKaart
+                  iban={vriend.iban}
+                  rekeninghouder={vriend.rekeninghouder}
+                  titel={`Rekeningnummer van ${naam}`}
+                />
+              </div>
+            )}
             {jijMoetHen.length === 0 ? (
               <p className="text-sm text-zacht mb-4">Niets.</p>
             ) : (
@@ -358,6 +383,13 @@ export default function VriendDetail() {
         )}
       </div>
 
+      <QrModal
+        open={qrOpen}
+        naam={profiel.data?.rekeninghouder ?? profiel.data?.gebruikersnaam ?? ''}
+        iban={profiel.data?.iban ?? null}
+        voorstelBedrag={teOntvangen}
+        onClose={() => setQrOpen(false)}
+      />
       <BedragModal
         open={betaalOpen}
         titel={`Betaling aan ${naam}`}

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { haalMijnGebruikersnaam, wijzigGebruikersnaam } from '../services/gebruikers'
+import { haalMijnProfiel, wijzigGebruikersnaam, wijzigBetaalgegevens } from '../services/gebruikers'
 import { gebruikersnaamVrij, wijzigEmail, wijzigWachtwoord } from '../services/auth'
 import { sleutels } from './sleutels'
 import { ontpak, ontpakAuth } from './ontpak'
@@ -7,13 +7,13 @@ import { useMij } from './mij'
 import { vereisVerbinding } from './verbinding'
 import { ALGEMENE_FOUT, foutCode, foutBoodschap, verbindingFoutTekst } from './fouten'
 
-// Je eigen gebruikersnaam. Wijzigt zelden, dus die mag lang blijven staan; de
-// gewone verversing bij focus is ruim genoeg.
+// Je eigen gebruikersnaam en betaalgegevens. Wijzigen zelden, dus die mogen lang
+// blijven staan; de gewone verversing bij focus is ruim genoeg.
 export function useProfiel() {
   const mij = useMij()
   return useQuery({
     queryKey: sleutels.profiel(mij),
-    queryFn: () => ontpak(haalMijnGebruikersnaam(mij!)),
+    queryFn: () => ontpak(haalMijnProfiel(mij!)),
     enabled: mij !== null,
   })
 }
@@ -49,6 +49,27 @@ export function useWijzigGebruikersnaam() {
       }
 
       return ontpak(wijzigGebruikersnaam(mij, nieuw))
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: sleutels.profiel(mij) }),
+  })
+}
+
+// Het rekeningnummer komt genormaliseerd binnen (zonder spaties, hoofdletters);
+// het valideren gebeurt in het scherm, want daar hoort de uitleg.
+export function useWijzigBetaalgegevens() {
+  const mij = useMij()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      iban,
+      rekeninghouder,
+    }: {
+      iban: string | null
+      rekeninghouder: string | null
+    }) => {
+      vereisVerbinding()
+      if (!mij) throw new Error('Niet ingelogd.')
+      return ontpak(wijzigBetaalgegevens(mij, iban, rekeninghouder))
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: sleutels.profiel(mij) }),
   })

@@ -62,7 +62,9 @@ export const persister = createAsyncStoragePersister({
 
 // Verhoog dit nummer als de vorm van de gecachte data wijzigt. Alles wat onder
 // een oud nummer bewaard is, wordt dan genegeerd in plaats van verkeerd getoond.
-export const CACHE_VERSIE = 'v1'
+// v2 (US-024): vriendenlijst() geeft er iban en rekeninghouder bij, dus een
+// bewaarde vriendenlijst uit v1 mist die velden.
+export const CACHE_VERSIE = 'v2'
 
 export const CACHE_MAX_LEEFTIJD = WEEK
 

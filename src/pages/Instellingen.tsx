@@ -4,16 +4,25 @@ import { useProfiel } from '../queries/gebruikers'
 import { useAuth } from '../context/AuthContext'
 import { useThema, THEMA_LABEL, type Thema } from '../utils/thema'
 import { formatLangeDatum } from '../utils/formatteer'
+import { formatIban } from '../utils/iban'
 import { Sectie, Rij } from '../components/Lijst'
 import KeuzeModal from '../components/KeuzeModal'
 import BevestigModal from '../components/BevestigModal'
 import GebruikersnaamModal from '../components/instellingen/GebruikersnaamModal'
 import EmailModal from '../components/instellingen/EmailModal'
 import WachtwoordModal from '../components/instellingen/WachtwoordModal'
+import BetaalgegevensModal from '../components/instellingen/BetaalgegevensModal'
 
 // Welke modal er openstaat. Eén stukje state in plaats van een boolean per
 // rij: er kan er toch maar één tegelijk open zijn.
-type Open = 'gebruikersnaam' | 'email' | 'wachtwoord' | 'thema' | 'uitloggen' | null
+type Open =
+  | 'gebruikersnaam'
+  | 'email'
+  | 'wachtwoord'
+  | 'betaalgegevens'
+  | 'thema'
+  | 'uitloggen'
+  | null
 
 const THEMA_OPTIES: { waarde: Thema; label: string; uitleg?: string }[] = [
   { waarde: 'licht', label: THEMA_LABEL.licht },
@@ -35,6 +44,8 @@ export default function Instellingen() {
   // is de sessie als eerste bij, de kolom `gebruikers.email` volgt pas na de
   // bevestigingsmail.
   const email = session?.user.email ?? '...'
+  const iban = profiel.data?.iban ?? null
+  const rekeninghouder = profiel.data?.rekeninghouder ?? null
   const sluit = () => setOpen(null)
 
   return (
@@ -49,6 +60,14 @@ export default function Instellingen() {
         />
         <Rij label="E-mailadres" waarde={email} onClick={() => setOpen('email')} />
         <Rij label="Wachtwoord" waarde="Wijzigen" onClick={() => setOpen('wachtwoord')} />
+      </Sectie>
+
+      <Sectie titel="Betaalgegevens">
+        <Rij
+          label="Rekeningnummer"
+          waarde={iban ? formatIban(iban) : 'Niet ingevuld'}
+          onClick={() => setOpen('betaalgegevens')}
+        />
       </Sectie>
 
       <Sectie titel="Weergave">
@@ -67,6 +86,12 @@ export default function Instellingen() {
       />
       <EmailModal open={open === 'email'} huidig={email} onClose={sluit} />
       <WachtwoordModal open={open === 'wachtwoord'} onClose={sluit} />
+      <BetaalgegevensModal
+        open={open === 'betaalgegevens'}
+        huidigeIban={iban}
+        huidigeRekeninghouder={rekeninghouder}
+        onClose={sluit}
+      />
       <KeuzeModal
         open={open === 'thema'}
         titel="Thema"

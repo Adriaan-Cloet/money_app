@@ -74,19 +74,25 @@ export type Database = {
           aangemaakt_op: string
           email: string | null
           gebruikersnaam: string
+          iban: string | null
           id: string
+          rekeninghouder: string | null
         }
         Insert: {
           aangemaakt_op?: string
           email?: string | null
           gebruikersnaam: string
+          iban?: string | null
           id: string
+          rekeninghouder?: string | null
         }
         Update: {
           aangemaakt_op?: string
           email?: string | null
           gebruikersnaam?: string
+          iban?: string | null
           id?: string
+          rekeninghouder?: string | null
         }
         Relationships: []
       }
@@ -95,6 +101,7 @@ export type Database = {
           aangemaakt_op: string
           eigenaar_id: string
           gekoppeld_gebruiker_id: string | null
+          iban: string | null
           id: string
           naam: string
         }
@@ -102,6 +109,7 @@ export type Database = {
           aangemaakt_op?: string
           eigenaar_id: string
           gekoppeld_gebruiker_id?: string | null
+          iban?: string | null
           id?: string
           naam: string
         }
@@ -109,6 +117,7 @@ export type Database = {
           aangemaakt_op?: string
           eigenaar_id?: string
           gekoppeld_gebruiker_id?: string | null
+          iban?: string | null
           id?: string
           naam?: string
         }
@@ -269,6 +278,8 @@ export type Database = {
         Returns: {
           gebruiker_id: string
           gebruikersnaam: string
+          iban: string
+          rekeninghouder: string
           vriendschap_id: string
         }[]
       }

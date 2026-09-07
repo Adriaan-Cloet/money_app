@@ -25,8 +25,10 @@ export async function maakLokaalContact(naam: string, eigenaarId: string) {
   return supabase.from('lokale_contacten').insert(nieuw).select().single()
 }
 
-export async function wijzigLokaalContact(id: string, naam: string) {
-  return supabase.from('lokale_contacten').update({ naam }).eq('id', id).select().single()
+// Naam en rekeningnummer gaan in een keer mee: het bewerkschermpje toont ze
+// samen, dus twee losse calls zouden enkel een half bewaarde rij kunnen opleveren.
+export async function wijzigLokaalContact(id: string, naam: string, iban: string | null) {
+  return supabase.from('lokale_contacten').update({ naam, iban }).eq('id', id).select().single()
 }
 
 export async function verwijderLokaalContact(id: string) {

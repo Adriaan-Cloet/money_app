@@ -10,12 +10,17 @@ import {
 } from '../queries/lokaleContacten'
 import { legeStatusTekst } from '../queries/status'
 import Avatar from '../components/Avatar'
+import { formatIban, isGeldigeIban, normaliseerIban, IBAN_ONGELDIG } from '../utils/iban'
 import BevestigModal from '../components/BevestigModal'
 
 export default function LokaleContacten() {
   const [nieuweNaam, setNieuweNaam] = useState('')
   const [bewerktId, setBewerktId] = useState<string | null>(null)
   const [bewerkNaam, setBewerkNaam] = useState('')
+  // Het rekeningnummer van een contact beheer je zelf: die persoon heeft geen
+  // account, dus het komt nergens anders vandaan.
+  const [bewerkIban, setBewerkIban] = useState('')
+  const [bewerkFout, setBewerkFout] = useState<string | null>(null)
   const [teVerwijderen, setTeVerwijderen] = useState<LokaalContact | null>(null)
 
   const contacten = useLokaleContacten()
@@ -39,10 +44,25 @@ export default function LokaleContacten() {
     maak.mutate(naam, { onSuccess: () => setNieuweNaam('') })
   }
 
+  function startBewerken(contact: LokaalContact) {
+    setBewerktId(contact.id)
+    setBewerkNaam(contact.naam)
+    setBewerkIban(contact.iban ? formatIban(contact.iban) : '')
+    setBewerkFout(null)
+  }
+
   function bewaarBewerking(id: string) {
     const naam = bewerkNaam.trim()
     if (!naam) return
-    wijzig.mutate({ id, naam }, { onSuccess: () => setBewerktId(null) })
+
+    const iban = normaliseerIban(bewerkIban)
+    if (iban !== '' && !isGeldigeIban(iban)) {
+      setBewerkFout(IBAN_ONGELDIG)
+      return
+    }
+
+    setBewerkFout(null)
+    wijzig.mutate({ id, naam, iban: iban || null }, { onSuccess: () => setBewerktId(null) })
   }
 
   function verwijderContact() {
@@ -81,47 +101,55 @@ export default function LokaleContacten() {
       ) : (
         <ul className="space-y-2">
           {lijst.map((contact) => (
-            <li
-              key={contact.id}
-              className="flex items-center gap-3 bg-vlak border border-rand rounded-2xl px-4 py-3"
-            >
+            <li key={contact.id} className="bg-vlak border border-rand rounded-2xl px-4 py-3">
               {bewerktId === contact.id ? (
-                <>
+                <div className="space-y-2">
                   <input
                     type="text"
                     autoFocus
                     value={bewerkNaam}
                     onChange={(e) => setBewerkNaam(e.target.value)}
-                    className="flex-1 border border-rand-sterk rounded-lg px-2 py-1.5 text-sm"
+                    className="w-full border border-rand-sterk rounded-lg px-2 py-1.5 text-sm"
                   />
-                  <button
-                    onClick={() => bewaarBewerking(contact.id)}
-                    disabled={bezig}
-                    className="text-merk text-sm font-medium disabled:opacity-60"
-                  >
-                    Bewaren
-                  </button>
-                  <button onClick={() => setBewerktId(null)} className="text-flauw text-sm">
-                    Annuleren
-                  </button>
-                </>
+                  <input
+                    type="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    placeholder="Rekeningnummer (optioneel)"
+                    value={bewerkIban}
+                    onChange={(e) => setBewerkIban(e.target.value)}
+                    className="w-full border border-rand-sterk rounded-lg px-2 py-1.5 text-sm"
+                  />
+                  {bewerkFout && <p className="text-sm text-gevaar">{bewerkFout}</p>}
+                  <div className="flex justify-end gap-3">
+                    <button onClick={() => setBewerktId(null)} className="text-flauw text-sm">
+                      Annuleren
+                    </button>
+                    <button
+                      onClick={() => bewaarBewerking(contact.id)}
+                      disabled={bezig}
+                      className="text-merk text-sm font-medium disabled:opacity-60"
+                    >
+                      Bewaren
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
+                <div className="flex items-center gap-3">
                   <Avatar naam={contact.naam} />
-                  <span className="flex-1 text-sm font-medium">{contact.naam}</span>
-                  <button
-                    onClick={() => {
-                      setBewerktId(contact.id)
-                      setBewerkNaam(contact.naam)
-                    }}
-                    className="text-flauw text-sm"
-                  >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{contact.naam}</p>
+                    {contact.iban && (
+                      <p className="text-xs text-flauw truncate">{formatIban(contact.iban)}</p>
+                    )}
+                  </div>
+                  <button onClick={() => startBewerken(contact)} className="text-flauw text-sm">
                     Bewerken
                   </button>
                   <button onClick={() => setTeVerwijderen(contact)} className="text-gevaar text-sm">
                     Verwijderen
                   </button>
-                </>
+                </div>
               )}
             </li>
           ))}

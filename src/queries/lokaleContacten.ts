@@ -60,8 +60,9 @@ export function useMaakLokaalContact() {
 }
 
 export function useWijzigLokaalContact() {
-  return useContactMutatie(({ id, naam }: { id: string; naam: string }) =>
-    ontpak(wijzigLokaalContact(id, naam)),
+  return useContactMutatie(
+    ({ id, naam, iban }: { id: string; naam: string; iban: string | null }) =>
+      ontpak(wijzigLokaalContact(id, naam, iban)),
   )
 }
 

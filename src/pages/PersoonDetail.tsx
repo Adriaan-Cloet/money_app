@@ -4,12 +4,15 @@ import type { Schuldpost } from '../services/schuldposten'
 import { useLokaalContact } from '../queries/lokaleContacten'
 import { usePostenVanContact, useVerwijderPost } from '../queries/schuldposten'
 import { useRegistreerContactbetaling } from '../queries/betalingen'
+import { useProfiel } from '../queries/gebruikers'
 import { legeStatusTekst } from '../queries/status'
 import { databaseFoutTekst } from '../queries/fouten'
 import StatusPill from '../components/StatusPill'
 import BedragModal from '../components/BedragModal'
 import BevestigModal from '../components/BevestigModal'
 import VerbindingBanner from '../components/VerbindingBanner'
+import IbanKaart from '../components/IbanKaart'
+import QrModal from '../components/QrModal'
 import { formatEuro, formatDatum } from '../utils/formatteer'
 import { openstaand } from '../services/verrekening'
 import { magPostWeg, POST_GEBLOKKEERD } from '../services/verwijderen'
@@ -57,8 +60,12 @@ export default function PersoonDetail() {
   const navigate = useNavigate()
   const [betaalOpen, setBetaalOpen] = useState(false)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
+  const [qrOpen, setQrOpen] = useState(false)
 
   const contact = useLokaalContact(id)
+  // De QR toont jouw eigen rekeningnummer. Een lokaal contact heeft geen app,
+  // dus dit is net de plek waar je hem laat scannen in plaats van te sturen.
+  const profiel = useProfiel()
   const posten = usePostenVanContact(id)
   const registreer = useRegistreerContactbetaling()
   const verwijder = useVerwijderPost()
@@ -108,13 +115,30 @@ export default function PersoonDetail() {
             </div>
 
             {open.length > 0 && (
-              <button
-                onClick={() => setBetaalOpen(true)}
-                disabled={registreer.isPending}
-                className="w-full bg-merk-vlak text-merk-op rounded-2xl py-3 text-sm font-medium mb-6 disabled:opacity-60"
-              >
-                {contact.data?.naam ?? 'Contact'} heeft betaald
-              </button>
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setQrOpen(true)}
+                  className="flex-1 border border-rand-sterk rounded-2xl py-3 text-sm font-medium"
+                >
+                  Laat scannen
+                </button>
+                <button
+                  onClick={() => setBetaalOpen(true)}
+                  disabled={registreer.isPending}
+                  className="flex-1 bg-merk-vlak text-merk-op rounded-2xl py-3 text-sm font-medium disabled:opacity-60"
+                >
+                  Heeft betaald
+                </button>
+              </div>
+            )}
+
+            {contact.data?.iban && (
+              <div className="mb-6">
+                <IbanKaart
+                  iban={contact.data.iban}
+                  titel={`Rekeningnummer van ${contact.data.naam}`}
+                />
+              </div>
             )}
 
             <p className="text-xs font-medium text-flauw mb-2">Openstaand</p>
@@ -146,6 +170,13 @@ export default function PersoonDetail() {
         )}
       </div>
 
+      <QrModal
+        open={qrOpen}
+        naam={profiel.data?.rekeninghouder ?? profiel.data?.gebruikersnaam ?? ''}
+        iban={profiel.data?.iban ?? null}
+        voorstelBedrag={saldo}
+        onClose={() => setQrOpen(false)}
+      />
       <BedragModal
         open={betaalOpen}
         titel={`${contact.data?.naam ?? 'Contact'} heeft betaald`}
