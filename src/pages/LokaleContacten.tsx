@@ -1,79 +1,54 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useAuth } from '../context/AuthContext'
+import type { LokaalContact } from '../services/lokaleContacten'
 import {
-  haalLokaleContacten,
-  maakLokaalContact,
-  wijzigLokaalContact,
-  verwijderLokaalContact,
-  lokaalContactFout,
-  type LokaalContact,
-} from '../services/lokaleContacten'
+  useLokaleContacten,
+  useMaakLokaalContact,
+  useWijzigLokaalContact,
+  useVerwijderLokaalContact,
+  contactFoutTekst,
+} from '../queries/lokaleContacten'
+import { legeStatusTekst } from '../queries/status'
 import Avatar from '../components/Avatar'
 import BevestigModal from '../components/BevestigModal'
 
 export default function LokaleContacten() {
-  const { session } = useAuth()
-  const [contacten, setContacten] = useState<LokaalContact[]>([])
   const [nieuweNaam, setNieuweNaam] = useState('')
-  const [laden, setLaden] = useState(true)
-  const [fout, setFout] = useState<string | null>(null)
   const [bewerktId, setBewerktId] = useState<string | null>(null)
   const [bewerkNaam, setBewerkNaam] = useState('')
   const [teVerwijderen, setTeVerwijderen] = useState<LokaalContact | null>(null)
 
-  const [versie, setVersie] = useState(0)
-  const herlaad = () => setVersie((v) => v + 1)
+  const contacten = useLokaleContacten()
+  const maak = useMaakLokaalContact()
+  const wijzig = useWijzigLokaalContact()
+  const verwijder = useVerwijderLokaalContact()
 
-  useEffect(() => {
-    let actief = true
-    async function laad() {
-      const { data, error } = await haalLokaleContacten()
-      if (!actief) return
-      if (error) setFout(lokaalContactFout(error))
-      else setContacten(data ?? [])
-      setLaden(false)
-    }
-    laad()
-    return () => {
-      actief = false
-    }
-  }, [versie])
+  // De versie/herlaad-truc is weg: elke mutatie invalideert zelf de sleutel van
+  // de contactenlijst, waarna React Query ze opnieuw ophaalt.
+  const lijst = contacten.data ?? []
+  const legeTekst = legeStatusTekst(contacten)
+  const fout = contactFoutTekst(maak.error ?? wijzig.error ?? verwijder.error)
+  const bezig = maak.isPending || wijzig.isPending || verwijder.isPending
 
-  async function voegToe(e: FormEvent) {
+  function voegToe(e: FormEvent) {
     e.preventDefault()
     const naam = nieuweNaam.trim()
-    if (!naam || !session) return
-    const { error } = await maakLokaalContact(naam, session.user.id)
-    if (error) {
-      setFout(lokaalContactFout(error))
-      return
-    }
-    setNieuweNaam('')
-    herlaad()
+    if (!naam) return
+    // mutate met een onSuccess, niet await: zo hoeven we de fout hier niet op te
+    // vangen. Die staat al in maak.error en komt via `fout` op het scherm.
+    maak.mutate(naam, { onSuccess: () => setNieuweNaam('') })
   }
 
-  async function bewaarBewerking(id: string) {
+  function bewaarBewerking(id: string) {
     const naam = bewerkNaam.trim()
     if (!naam) return
-    const { error } = await wijzigLokaalContact(id, naam)
-    if (error) {
-      setFout(lokaalContactFout(error))
-      return
-    }
-    setBewerktId(null)
-    herlaad()
+    wijzig.mutate({ id, naam }, { onSuccess: () => setBewerktId(null) })
   }
 
-  async function verwijder() {
+  function verwijderContact() {
     if (!teVerwijderen) return
-    const { error } = await verwijderLokaalContact(teVerwijderen.id)
+    verwijder.mutate(teVerwijderen.id)
     setTeVerwijderen(null)
-    if (error) {
-      setFout(lokaalContactFout(error))
-      return
-    }
-    herlaad()
   }
 
   return (
@@ -90,7 +65,8 @@ export default function LokaleContacten() {
         />
         <button
           type="submit"
-          className="bg-[#3B6D11] text-white rounded-lg px-4 py-2.5 text-sm font-medium"
+          disabled={bezig}
+          className="bg-[#3B6D11] text-white rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-60"
         >
           Toevoegen
         </button>
@@ -98,13 +74,13 @@ export default function LokaleContacten() {
 
       {fout && <p className="text-sm text-red-600 mb-3">{fout}</p>}
 
-      {laden ? (
-        <p className="text-sm text-gray-500">Laden...</p>
-      ) : contacten.length === 0 ? (
+      {legeTekst ? (
+        <p className="text-sm text-gray-500">{legeTekst}</p>
+      ) : lijst.length === 0 ? (
         <p className="text-sm text-gray-500">Nog geen lokale contacten.</p>
       ) : (
         <ul className="space-y-2">
-          {contacten.map((contact) => (
+          {lijst.map((contact) => (
             <li
               key={contact.id}
               className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3"
@@ -120,7 +96,8 @@ export default function LokaleContacten() {
                   />
                   <button
                     onClick={() => bewaarBewerking(contact.id)}
-                    className="text-[#3B6D11] text-sm font-medium"
+                    disabled={bezig}
+                    className="text-[#3B6D11] text-sm font-medium disabled:opacity-60"
                   >
                     Bewaren
                   </button>
@@ -155,7 +132,7 @@ export default function LokaleContacten() {
         open={teVerwijderen !== null}
         titel="Contact verwijderen?"
         tekst={`${teVerwijderen?.naam ?? 'Dit contact'} en al zijn terugvragen worden verwijderd. Dit kan niet ongedaan gemaakt worden.`}
-        onBevestig={verwijder}
+        onBevestig={verwijderContact}
         onClose={() => setTeVerwijderen(null)}
       />
     </div>

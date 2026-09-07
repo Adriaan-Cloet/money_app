@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatEuro, formatDatum } from './formatteer'
+import { formatEuro, formatDatum, formatTijd } from './formatteer'
 
 describe('formatEuro', () => {
   it('zet een bedrag om naar euro met komma', () => {
@@ -32,5 +32,17 @@ describe('formatDatum', () => {
 
   it('behoudt de voorloopnullen', () => {
     expect(formatDatum('2026-01-01')).toBe('01-01-2026')
+  })
+})
+
+describe('formatTijd', () => {
+  // Geen vaste uitkomst controleren: toLocaleTimeString volgt de tijdzone van
+  // de machine, dus '14:30' hier zou elders falen. De vorm is wat telt.
+  it('geeft uren en minuten met een dubbele punt', () => {
+    expect(formatTijd(Date.UTC(2026, 8, 6, 14, 30))).toMatch(/^\d{2}:\d{2}$/)
+  })
+
+  it('houdt de voorloopnul in het uur', () => {
+    expect(formatTijd(Date.UTC(2026, 8, 6, 9, 5))).toMatch(/^\d{2}:\d{2}$/)
   })
 })

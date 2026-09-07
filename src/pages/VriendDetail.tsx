@@ -1,33 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { haalVrienden } from '../services/vrienden'
+import type { Schuldpost } from '../services/schuldposten'
+import type { Betaling } from '../services/betalingen'
+import { useVrienden } from '../queries/vrienden'
 import {
-  haalSchuldpostenVoorGebruiker,
-  haalSchuldpostenAlsSchuldenaar,
-  weigerPost,
-  heropenPost,
-  verwijderPost,
-  type Schuldpost,
-} from '../services/schuldposten'
+  usePostenVanVriend,
+  usePostenAlsSchuldenaar,
+  useWeigerPost,
+  useHeropenPost,
+  useVerwijderPost,
+} from '../queries/schuldposten'
 import {
-  maakBetaling,
-  haalInkomendeBetalingen,
-  haalUitgaandeBetalingen,
-  bevestigBetaling,
-  zetBetalingStatus,
-  registreerVriendbetaling,
-  type Betaling,
-} from '../services/betalingen'
+  useInkomendeBetalingen,
+  useUitgaandeBetalingen,
+  useMaakBetaling,
+  useRegistreerVriendbetaling,
+  useBevestigBetaling,
+  useZetBetalingStatus,
+} from '../queries/betalingen'
+import { legeStatusTekst } from '../queries/status'
+import { databaseFoutTekst } from '../queries/fouten'
 import StatusPill from '../components/StatusPill'
 import BedragModal from '../components/BedragModal'
 import TekstModal from '../components/TekstModal'
 import BevestigModal from '../components/BevestigModal'
+import VerbindingBanner from '../components/VerbindingBanner'
 import { formatEuro, formatDatum } from '../utils/formatteer'
 import { openstaand, saldoMetVriend } from '../services/verrekening'
-
-type Vriend = { gebruiker_id: string; gebruikersnaam: string }
 
 function PostRegel({ post, actie }: { post: Schuldpost; actie?: ReactNode }) {
   const afgehandeld = post.status === 'betaald' || post.status === 'geweigerd'
@@ -72,99 +72,79 @@ function BetalingRegel({ betaling, acties }: { betaling: Betaling; acties?: Reac
 export default function VriendDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { session } = useAuth()
-  const [naam, setNaam] = useState<string | null>(null)
-  const [zijMoetenJou, setZijMoetenJou] = useState<Schuldpost[]>([])
-  const [jijMoetHen, setJijMoetHen] = useState<Schuldpost[]>([])
-  const [inkomend, setInkomend] = useState<Betaling[]>([])
-  const [uitgaand, setUitgaand] = useState<Betaling[]>([])
-  const [laden, setLaden] = useState(true)
-  const [versie, setVersie] = useState(0)
-  const herlaad = () => setVersie((v) => v + 1)
 
   const [betaalOpen, setBetaalOpen] = useState(false)
   const [ontvangOpen, setOntvangOpen] = useState(false)
   const [heropenId, setHeropenId] = useState<string | null>(null)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
 
-  useEffect(() => {
-    if (!id || !session) return
-    let actief = true
-    const mij = session.user.id
-    const vriendId = id
-    async function laad() {
-      const [{ data: vrienden }, { data: teGoed }, { data: schuldenaarPosten }, { data: ink }, { data: uit }] =
-        await Promise.all([
-          haalVrienden(),
-          haalSchuldpostenVoorGebruiker(mij, vriendId),
-          haalSchuldpostenAlsSchuldenaar(mij),
-          haalInkomendeBetalingen(mij, vriendId),
-          haalUitgaandeBetalingen(mij, vriendId),
-        ])
-      if (!actief) return
-      const vriend = ((vrienden as Vriend[]) ?? []).find((v) => v.gebruiker_id === vriendId)
-      setNaam(vriend?.gebruikersnaam ?? 'Vriend')
-      setZijMoetenJou(teGoed ?? [])
-      setJijMoetHen((schuldenaarPosten ?? []).filter((p) => p.schuldeiser_id === vriendId))
-      setInkomend(ink ?? [])
-      setUitgaand(uit ?? [])
-      setLaden(false)
-    }
-    laad()
-    return () => {
-      actief = false
-    }
-  }, [id, session, versie])
+  const vrienden = useVrienden()
+  const postenVanVriend = usePostenVanVriend(id)
+  const postenAlsSchuldenaar = usePostenAlsSchuldenaar()
+  const inkomendeBetalingen = useInkomendeBetalingen(id)
+  const uitgaandeBetalingen = useUitgaandeBetalingen(id)
 
-  async function weiger(postId: string) {
-    await weigerPost(postId)
-    herlaad()
-  }
+  const weiger = useWeigerPost()
+  const heropen = useHeropenPost()
+  const verwijder = useVerwijderPost()
+  const betaal = useMaakBetaling()
+  const ontvang = useRegistreerVriendbetaling()
+  const bevestig = useBevestigBetaling()
+  const zetStatus = useZetBetalingStatus()
 
-  async function onHeropen(uitleg: string) {
+  // Alle vier de bronnen zijn nodig voor het saldo. Mist er een, dan toont
+  // legeStatusTekst waarom in plaats van een verkeerd bedrag.
+  const bronnen = [
+    postenVanVriend,
+    postenAlsSchuldenaar,
+    inkomendeBetalingen,
+    uitgaandeBetalingen,
+  ]
+  const legeTekst = bronnen.map(legeStatusTekst).find((tekst) => tekst !== null) ?? null
+
+  const zijMoetenJou = postenVanVriend.data ?? []
+  // Deze query haalt alles op wat jij aan iedereen moet, dus hier filteren we
+  // op deze ene vriend. Bewust dezelfde query als op Home: zo staat ze een keer
+  // in de cache in plaats van een keer per vriend.
+  const jijMoetHen = (postenAlsSchuldenaar.data ?? []).filter((post) => post.schuldeiser_id === id)
+  const inkomend = inkomendeBetalingen.data ?? []
+  const uitgaand = uitgaandeBetalingen.data ?? []
+
+  const naam = vrienden.data?.find((vriend) => vriend.gebruiker_id === id)?.gebruikersnaam ?? 'Vriend'
+
+  const mutaties = [weiger, heropen, verwijder, betaal, ontvang, bevestig, zetStatus]
+  const fout = databaseFoutTekst(mutaties.map((m) => m.error).find((f) => f !== null) ?? null)
+  const bezig = mutaties.some((m) => m.isPending)
+
+  const saldo = saldoMetVriend({ zijMoetenJou, jijMoetHen, uitgaand, inkomend })
+  const jijMoetIets = jijMoetHen.some((post) => openstaand(post) > 0)
+  const zijMoetenIets = zijMoetenJou.some((post) => openstaand(post) > 0)
+
+  function onHeropen(uitleg: string) {
     if (!heropenId) return
     const postId = heropenId
     setHeropenId(null)
-    await heropenPost(postId, uitleg)
-    herlaad()
+    heropen.mutate({ postId, uitleg })
   }
 
-  async function onVerwijder() {
+  function onVerwijder() {
     if (!teVerwijderen) return
     const postId = teVerwijderen.id
     setTeVerwijderen(null)
-    await verwijderPost(postId)
-    herlaad()
+    verwijder.mutate(postId)
   }
 
-  async function onBetaal(bedrag: number) {
-    if (!id || !session) return
+  function onBetaal(bedrag: number) {
+    if (!id) return
     setBetaalOpen(false)
-    await maakBetaling(session.user.id, id, bedrag)
-    herlaad()
+    betaal.mutate({ ontvangerId: id, bedrag })
   }
 
-  async function onOntvang(bedrag: number) {
+  function onOntvang(bedrag: number) {
     if (!id) return
     setOntvangOpen(false)
-    await registreerVriendbetaling(id, bedrag)
-    herlaad()
+    ontvang.mutate({ vriendId: id, bedrag })
   }
-
-  async function bevestig(betalingId: string) {
-    await bevestigBetaling(betalingId)
-    herlaad()
-  }
-
-  async function zet(betalingId: string, status: 'wacht' | 'fout') {
-    await zetBetalingStatus(betalingId, status)
-    herlaad()
-  }
-
-  const saldo = saldoMetVriend({ zijMoetenJou, jijMoetHen, uitgaand, inkomend })
-
-  const jijMoetIets = jijMoetHen.some((p) => openstaand(p) > 0)
-  const zijMoetenIets = zijMoetenJou.some((p) => openstaand(p) > 0)
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
@@ -173,16 +153,22 @@ export default function VriendDetail() {
           <button onClick={() => navigate(-1)} className="text-gray-500 text-sm">
             &larr; Terug
           </button>
-          <h1 className="text-xl font-medium text-[#3B6D11]">{naam ?? 'Vriend'}</h1>
+          <h1 className="text-xl font-medium text-[#3B6D11]">{naam}</h1>
         </div>
 
-        {laden ? (
-          <p className="text-sm text-gray-500">Laden...</p>
+        <VerbindingBanner />
+
+        {fout && <p className="text-sm text-red-600 mb-4">{fout}</p>}
+
+        {legeTekst ? (
+          <p className="text-sm text-gray-500">{legeTekst}</p>
         ) : (
           <>
             <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 text-center">
               <p className="text-xs text-gray-500">Saldo met {naam}</p>
-              <p className={`text-2xl font-medium mt-1 ${saldo < 0 ? 'text-red-600' : 'text-[#3B6D11]'}`}>
+              <p
+                className={`text-2xl font-medium mt-1 ${saldo < 0 ? 'text-red-600' : 'text-[#3B6D11]'}`}
+              >
                 {saldo < 0 ? 'Jij moet' : 'Jij krijgt'} {formatEuro(saldo)}
               </p>
             </div>
@@ -190,8 +176,12 @@ export default function VriendDetail() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-gray-400">Zij moeten jou</p>
               {zijMoetenIets && (
-                <button onClick={() => setOntvangOpen(true)} className="text-sm font-medium text-[#3B6D11]">
-                  {naam ?? 'Vriend'} heeft betaald
+                <button
+                  onClick={() => setOntvangOpen(true)}
+                  disabled={bezig}
+                  className="text-sm font-medium text-[#3B6D11] disabled:opacity-60"
+                >
+                  {naam} heeft betaald
                 </button>
               )}
             </div>
@@ -207,11 +197,19 @@ export default function VriendDetail() {
                       post.status === 'geweigerd' ? (
                         <div className="flex gap-3">
                           {!post.heropend && (
-                            <button onClick={() => setHeropenId(post.id)} className="text-sm text-[#3B6D11]">
+                            <button
+                              onClick={() => setHeropenId(post.id)}
+                              disabled={bezig}
+                              className="text-sm text-[#3B6D11] disabled:opacity-60"
+                            >
                               Heropenen
                             </button>
                           )}
-                          <button onClick={() => setTeVerwijderen(post)} className="text-sm text-red-600">
+                          <button
+                            onClick={() => setTeVerwijderen(post)}
+                            disabled={bezig}
+                            className="text-sm text-red-600 disabled:opacity-60"
+                          >
                             Verwijderen
                           </button>
                         </div>
@@ -233,13 +231,29 @@ export default function VriendDetail() {
                       acties={
                         betaling.status === 'gemeld' ? (
                           <>
-                            <button onClick={() => bevestig(betaling.id)} className="text-sm text-[#3B6D11]">
+                            <button
+                              onClick={() => bevestig.mutate(betaling.id)}
+                              disabled={bezig}
+                              className="text-sm text-[#3B6D11] disabled:opacity-60"
+                            >
                               Bevestigen
                             </button>
-                            <button onClick={() => zet(betaling.id, 'wacht')} className="text-sm text-gray-500">
+                            <button
+                              onClick={() =>
+                                zetStatus.mutate({ betalingId: betaling.id, status: 'wacht' })
+                              }
+                              disabled={bezig}
+                              className="text-sm text-gray-500 disabled:opacity-60"
+                            >
                               Wachten
                             </button>
-                            <button onClick={() => zet(betaling.id, 'fout')} className="text-sm text-red-600">
+                            <button
+                              onClick={() =>
+                                zetStatus.mutate({ betalingId: betaling.id, status: 'fout' })
+                              }
+                              disabled={bezig}
+                              className="text-sm text-red-600 disabled:opacity-60"
+                            >
                               Fout
                             </button>
                           </>
@@ -254,7 +268,11 @@ export default function VriendDetail() {
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-gray-400">Jij moet hen</p>
               {jijMoetIets && (
-                <button onClick={() => setBetaalOpen(true)} className="text-sm font-medium text-[#3B6D11]">
+                <button
+                  onClick={() => setBetaalOpen(true)}
+                  disabled={bezig}
+                  className="text-sm font-medium text-[#3B6D11] disabled:opacity-60"
+                >
                   Ik heb betaald
                 </button>
               )}
@@ -269,7 +287,11 @@ export default function VriendDetail() {
                     post={post}
                     actie={
                       post.status === 'open' ? (
-                        <button onClick={() => weiger(post.id)} className="text-sm text-red-600">
+                        <button
+                          onClick={() => weiger.mutate(post.id)}
+                          disabled={bezig}
+                          className="text-sm text-red-600 disabled:opacity-60"
+                        >
                           Weigeren
                         </button>
                       ) : undefined
@@ -295,13 +317,13 @@ export default function VriendDetail() {
 
       <BedragModal
         open={betaalOpen}
-        titel={`Betaling aan ${naam ?? 'vriend'}`}
+        titel={`Betaling aan ${naam}`}
         onBevestig={onBetaal}
         onClose={() => setBetaalOpen(false)}
       />
       <BedragModal
         open={ontvangOpen}
-        titel={`${naam ?? 'Vriend'} heeft betaald`}
+        titel={`${naam} heeft betaald`}
         onBevestig={onOntvang}
         onClose={() => setOntvangOpen(false)}
       />

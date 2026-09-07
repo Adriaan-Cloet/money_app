@@ -1,61 +1,52 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { haalLokaleContacten } from '../services/lokaleContacten'
-import {
-  haalSchuldpostenAlsSchuldeiser,
-  haalSchuldpostenAlsSchuldenaar,
-} from '../services/schuldposten'
-import { haalMijnGebruikersnaam } from '../services/gebruikers'
-import { haalVrienden } from '../services/vrienden'
-import { haalMijnBetalingen } from '../services/betalingen'
+import { useMij } from '../queries/mij'
+import { useProfiel } from '../queries/gebruikers'
+import { useVrienden } from '../queries/vrienden'
+import { useLokaleContacten } from '../queries/lokaleContacten'
+import { usePostenAlsSchuldeiser, usePostenAlsSchuldenaar } from '../queries/schuldposten'
+import { useMijnBetalingen } from '../queries/betalingen'
+import { legeStatusTekst } from '../queries/status'
 import Avatar from '../components/Avatar'
 import { formatEuro } from '../utils/formatteer'
-import { regelsPerPersoon, totaalKrijgt, totaalMoet, type Regel } from '../services/verrekening'
-
-type Vriend = { gebruiker_id: string; gebruikersnaam: string }
+import { regelsPerPersoon, totaalKrijgt, totaalMoet } from '../services/verrekening'
 
 export default function Home() {
-  const { session } = useAuth()
-  const [regels, setRegels] = useState<Regel[]>([])
-  const [gebruikersnaam, setGebruikersnaam] = useState<string | null>(null)
-  const [laden, setLaden] = useState(true)
+  const mij = useMij()
 
-  useEffect(() => {
-    async function laad() {
-      if (!session) return
-      const mij = session.user.id
-      const [
-        { data: contacten },
-        { data: alsSchuldeiser },
-        { data: profiel },
-        { data: vrienden },
-        { data: alsSchuldenaar },
-        { data: betalingen },
-      ] = await Promise.all([
-        haalLokaleContacten(),
-        haalSchuldpostenAlsSchuldeiser(mij),
-        haalMijnGebruikersnaam(mij),
-        haalVrienden(),
-        haalSchuldpostenAlsSchuldenaar(mij),
-        haalMijnBetalingen(mij),
-      ])
-      setGebruikersnaam(profiel?.gebruikersnaam ?? null)
+  // Zes losse queries in plaats van één Promise.all. Ze cachen elk apart, dus
+  // een scherm dat er maar een van nodig heeft haalt de rest niet op, en een
+  // mutatie elders ververst enkel wat ze echt raakt.
+  const profiel = useProfiel()
+  const contacten = useLokaleContacten()
+  const vrienden = useVrienden()
+  const alsSchuldeiser = usePostenAlsSchuldeiser()
+  const alsSchuldenaar = usePostenAlsSchuldenaar()
+  const betalingen = useMijnBetalingen()
 
-      setRegels(
-        regelsPerPersoon({
-          mij,
-          contacten: contacten ?? [],
-          vrienden: (vrienden as Vriend[]) ?? [],
-          alsSchuldeiser: alsSchuldeiser ?? [],
-          alsSchuldenaar: alsSchuldenaar ?? [],
-          betalingen: betalingen ?? [],
-        }),
-      )
-      setLaden(false)
-    }
-    laad()
-  }, [session])
+  // De verrekening mag pas rekenen als alle vijf de bronnen binnen zijn. Zonder
+  // de vriendenlijst staat er "Onbekend" bij een naam, zonder de betalingen
+  // klopt het saldo niet. Het profiel telt niet mee, dat is enkel de begroeting.
+  const bronnen = [contacten, vrienden, alsSchuldeiser, alsSchuldenaar, betalingen]
+  const legeTekst = bronnen.map(legeStatusTekst).find((tekst) => tekst !== null) ?? null
+
+  const klaar =
+    mij !== null &&
+    contacten.data !== undefined &&
+    vrienden.data !== undefined &&
+    alsSchuldeiser.data !== undefined &&
+    alsSchuldenaar.data !== undefined &&
+    betalingen.data !== undefined
+
+  const regels = klaar
+    ? regelsPerPersoon({
+        mij,
+        contacten: contacten.data,
+        vrienden: vrienden.data,
+        alsSchuldeiser: alsSchuldeiser.data,
+        alsSchuldenaar: alsSchuldenaar.data,
+        betalingen: betalingen.data,
+      })
+    : []
 
   const totaalTeKrijgen = totaalKrijgt(regels)
   const totaalTeBetalen = totaalMoet(regels)
@@ -64,7 +55,9 @@ export default function Home() {
     <div>
       <div className="mb-6">
         <p className="text-sm text-gray-500">Hallo</p>
-        <h1 className="text-2xl font-medium text-[#3B6D11]">{gebruikersnaam ?? ''}</h1>
+        <h1 className="text-2xl font-medium text-[#3B6D11]">
+          {profiel.data?.gebruikersnaam ?? ''}
+        </h1>
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
@@ -80,8 +73,8 @@ export default function Home() {
 
       <p className="text-xs font-medium text-gray-400 mb-2">Per persoon</p>
 
-      {laden ? (
-        <p className="text-sm text-gray-500">Laden...</p>
+      {legeTekst ? (
+        <p className="text-sm text-gray-500">{legeTekst}</p>
       ) : regels.length === 0 ? (
         <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center">
           <p className="text-sm text-gray-500">Nog niets openstaand.</p>
@@ -99,7 +92,9 @@ export default function Home() {
                 >
                   <Avatar naam={regel.naam} />
                   <span className="flex-1 text-sm font-medium">{regel.naam}</span>
-                  <span className={`text-sm font-medium ${krijgt ? 'text-[#3B6D11]' : 'text-red-600'}`}>
+                  <span
+                    className={`text-sm font-medium ${krijgt ? 'text-[#3B6D11]' : 'text-red-600'}`}
+                  >
                     {krijgt ? '+ ' : '- '}
                     {formatEuro(regel.bedrag)}
                   </span>

@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { haalLokaalContact, type LokaalContact } from '../services/lokaleContacten'
-import {
-  haalSchuldpostenVoorContact,
-  verwijderPost,
-  type Schuldpost,
-} from '../services/schuldposten'
-import { registreerContactbetaling } from '../services/betalingen'
+import type { Schuldpost } from '../services/schuldposten'
+import { useLokaalContact } from '../queries/lokaleContacten'
+import { usePostenVanContact, useVerwijderPost } from '../queries/schuldposten'
+import { useRegistreerContactbetaling } from '../queries/betalingen'
+import { legeStatusTekst } from '../queries/status'
+import { databaseFoutTekst } from '../queries/fouten'
 import StatusPill from '../components/StatusPill'
 import BedragModal from '../components/BedragModal'
 import BevestigModal from '../components/BevestigModal'
+import VerbindingBanner from '../components/VerbindingBanner'
 import { formatEuro, formatDatum } from '../utils/formatteer'
 import { openstaand } from '../services/verrekening'
 
@@ -47,53 +47,34 @@ function PostRegel({ post, onVerwijder }: { post: Schuldpost; onVerwijder?: () =
 export default function PersoonDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [contact, setContact] = useState<LokaalContact | null>(null)
-  const [posten, setPosten] = useState<Schuldpost[]>([])
-  const [laden, setLaden] = useState(true)
   const [betaalOpen, setBetaalOpen] = useState(false)
   const [teVerwijderen, setTeVerwijderen] = useState<Schuldpost | null>(null)
 
-  const [versie, setVersie] = useState(0)
-  const herlaad = () => setVersie((v) => v + 1)
+  const contact = useLokaalContact(id)
+  const posten = usePostenVanContact(id)
+  const registreer = useRegistreerContactbetaling()
+  const verwijder = useVerwijderPost()
 
-  useEffect(() => {
-    if (!id) return
-    let actief = true
-    const contactId = id
-    async function laad() {
-      const [{ data: c }, { data: p }] = await Promise.all([
-        haalLokaalContact(contactId),
-        haalSchuldpostenVoorContact(contactId),
-      ])
-      if (!actief) return
-      setContact(c)
-      setPosten(p ?? [])
-      setLaden(false)
-    }
-    laad()
-    return () => {
-      actief = false
-    }
-  }, [id, versie])
+  const lijst = posten.data ?? []
+  const legeTekst = legeStatusTekst(posten)
+  const fout = databaseFoutTekst(registreer.error ?? verwijder.error)
 
-  async function onBetaal(bedrag: number) {
+  const saldo = lijst.reduce((som, post) => som + openstaand(post), 0)
+  const open = lijst.filter((post) => !isAfgehandeld(post))
+  const afgehandeld = lijst.filter(isAfgehandeld)
+
+  function onBetaal(bedrag: number) {
     if (!id) return
     setBetaalOpen(false)
-    await registreerContactbetaling(id, bedrag)
-    herlaad()
+    registreer.mutate({ contactId: id, bedrag })
   }
 
-  async function onVerwijder() {
+  function onVerwijder() {
     if (!teVerwijderen) return
     const postId = teVerwijderen.id
     setTeVerwijderen(null)
-    await verwijderPost(postId)
-    herlaad()
+    verwijder.mutate(postId)
   }
-
-  const saldo = posten.reduce((s, p) => s + openstaand(p), 0)
-  const open = posten.filter((p) => !isAfgehandeld(p))
-  const afgehandeld = posten.filter(isAfgehandeld)
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)]">
@@ -102,24 +83,31 @@ export default function PersoonDetail() {
           <button onClick={() => navigate(-1)} className="text-gray-500 text-sm">
             &larr; Terug
           </button>
-          <h1 className="text-xl font-medium text-[#3B6D11]">{contact?.naam ?? 'Persoon'}</h1>
+          <h1 className="text-xl font-medium text-[#3B6D11]">{contact.data?.naam ?? 'Persoon'}</h1>
         </div>
 
-        {laden ? (
-          <p className="text-sm text-gray-500">Laden...</p>
+        <VerbindingBanner />
+
+        {fout && <p className="text-sm text-red-600 mb-4">{fout}</p>}
+
+        {legeTekst ? (
+          <p className="text-sm text-gray-500">{legeTekst}</p>
         ) : (
           <>
             <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-4 text-center">
-              <p className="text-xs text-gray-500">Saldo met {contact?.naam}</p>
-              <p className="text-2xl font-medium text-[#3B6D11] mt-1">Jij krijgt {formatEuro(saldo)}</p>
+              <p className="text-xs text-gray-500">Saldo met {contact.data?.naam}</p>
+              <p className="text-2xl font-medium text-[#3B6D11] mt-1">
+                Jij krijgt {formatEuro(saldo)}
+              </p>
             </div>
 
             {open.length > 0 && (
               <button
                 onClick={() => setBetaalOpen(true)}
-                className="w-full bg-[#3B6D11] text-white rounded-2xl py-3 text-sm font-medium mb-6"
+                disabled={registreer.isPending}
+                className="w-full bg-[#3B6D11] text-white rounded-2xl py-3 text-sm font-medium mb-6 disabled:opacity-60"
               >
-                {contact?.naam ?? 'Contact'} heeft betaald
+                {contact.data?.naam ?? 'Contact'} heeft betaald
               </button>
             )}
 
@@ -150,7 +138,7 @@ export default function PersoonDetail() {
 
       <BedragModal
         open={betaalOpen}
-        titel={`${contact?.naam ?? 'Contact'} heeft betaald`}
+        titel={`${contact.data?.naam ?? 'Contact'} heeft betaald`}
         onBevestig={onBetaal}
         onClose={() => setBetaalOpen(false)}
       />

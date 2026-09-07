@@ -1,61 +1,57 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import {
-  haalLokaleContacten,
-  maakLokaalContact,
-  lokaalContactFout,
-  type LokaalContact,
-} from '../services/lokaleContacten'
-import { haalVrienden } from '../services/vrienden'
-import {
-  maakSchuldpostVoorContact,
-  maakSchuldpostVoorGebruiker,
-} from '../services/schuldposten'
+import { useLokaleContacten, useMaakLokaalContact, contactFoutTekst } from '../queries/lokaleContacten'
+import { useVrienden } from '../queries/vrienden'
+import { useMaakSchuldpost } from '../queries/schuldposten'
+import { databaseFoutTekst } from '../queries/fouten'
+import VerbindingBanner from '../components/VerbindingBanner'
 
-type Vriend = { gebruiker_id: string; gebruikersnaam: string }
 type Keuze = { type: 'contact' | 'vriend'; id: string }
 
 const vandaag = () => new Date().toISOString().slice(0, 10)
 
 export default function NieuwePost() {
-  const { session } = useAuth()
   const navigate = useNavigate()
 
-  const [contacten, setContacten] = useState<LokaalContact[]>([])
-  const [vrienden, setVrienden] = useState<Vriend[]>([])
   const [bedrag, setBedrag] = useState('')
   const [keuze, setKeuze] = useState<Keuze | null>(null)
   const [omschrijving, setOmschrijving] = useState('')
   const [datum, setDatum] = useState(vandaag())
-  const [fout, setFout] = useState<string | null>(null)
-  const [bezig, setBezig] = useState(false)
-
   const [toonNieuwContact, setToonNieuwContact] = useState(false)
   const [nieuwContactNaam, setNieuwContactNaam] = useState('')
 
-  useEffect(() => {
-    haalLokaleContacten().then(({ data }) => setContacten(data ?? []))
-    haalVrienden().then(({ data }) => setVrienden((data as Vriend[]) ?? []))
-  }, [])
+  // Fouten van het formulier zelf, dus voor er iets naar de database gaat. De
+  // fouten van de database komen uit de mutaties.
+  const [validatieFout, setValidatieFout] = useState<string | null>(null)
+
+  const contacten = useLokaleContacten()
+  const vrienden = useVrienden()
+  const maakContact = useMaakLokaalContact()
+  const maakPost = useMaakSchuldpost()
+
+  const contactenLijst = contacten.data ?? []
+  const vriendenLijst = vrienden.data ?? []
+  const fout = validatieFout ?? contactFoutTekst(maakContact.error) ?? databaseFoutTekst(maakPost.error)
 
   function isGekozen(type: Keuze['type'], id: string) {
     return keuze?.type === type && keuze.id === id
   }
 
-  async function voegContactToe() {
+  function voegContactToe() {
     const naam = nieuwContactNaam.trim()
-    if (!naam || !session) return
-    const { data, error } = await maakLokaalContact(naam, session.user.id)
-    if (error || !data) {
-      setFout(error ? lokaalContactFout(error) : 'Contact toevoegen mislukt.')
-      return
-    }
-    setContacten((vorige) => [...vorige, data])
-    setKeuze({ type: 'contact', id: data.id })
-    setNieuwContactNaam('')
-    setToonNieuwContact(false)
+    if (!naam) return
+    setValidatieFout(null)
+    // De mutatie geeft de aangemaakte rij terug, dus we kunnen het nieuwe
+    // contact meteen selecteren. De lijst zelf wordt door de invalidatie in de
+    // hook opnieuw opgehaald; die hoeven we hier niet met de hand bij te werken.
+    maakContact.mutate(naam, {
+      onSuccess: (contact) => {
+        setKeuze({ type: 'contact', id: contact.id })
+        setNieuwContactNaam('')
+        setToonNieuwContact(false)
+      },
+    })
   }
 
   function bijToets(e: KeyboardEvent<HTMLInputElement>) {
@@ -65,45 +61,31 @@ export default function NieuwePost() {
     }
   }
 
-  async function verstuur(e: FormEvent) {
+  function verstuur(e: FormEvent) {
     e.preventDefault()
-    setFout(null)
+    setValidatieFout(null)
+    maakPost.reset()
 
     const bedragGetal = Number.parseFloat(bedrag.replace(',', '.'))
     if (!Number.isFinite(bedragGetal) || bedragGetal <= 0) {
-      setFout('Vul een geldig bedrag in.')
+      setValidatieFout('Vul een geldig bedrag in.')
       return
     }
-    if (!keuze || !session) {
-      setFout('Kies van wie je dit terugvraagt.')
+    if (!keuze) {
+      setValidatieFout('Kies van wie je dit terugvraagt.')
       return
     }
 
-    setBezig(true)
-    const gedeeld = {
-      bedrag: bedragGetal,
-      omschrijving: omschrijving.trim() || null,
-      datum,
-    }
-    const { error } =
-      keuze.type === 'contact'
-        ? await maakSchuldpostVoorContact({
-            schuldeiserId: session.user.id,
-            schuldenaarContactId: keuze.id,
-            ...gedeeld,
-          })
-        : await maakSchuldpostVoorGebruiker({
-            schuldeiserId: session.user.id,
-            schuldenaarGebruikerId: keuze.id,
-            ...gedeeld,
-          })
-    setBezig(false)
-
-    if (error) {
-      setFout(error.message)
-      return
-    }
-    navigate('/')
+    maakPost.mutate(
+      {
+        type: keuze.type,
+        id: keuze.id,
+        bedrag: bedragGetal,
+        omschrijving: omschrijving.trim() || null,
+        datum,
+      },
+      { onSuccess: () => navigate('/') },
+    )
   }
 
   const chipKlasse = (actief: boolean) =>
@@ -120,6 +102,8 @@ export default function NieuwePost() {
           </button>
           <h1 className="text-xl font-medium text-[#3B6D11]">Nieuwe terugvraag</h1>
         </div>
+
+        <VerbindingBanner />
 
         <form onSubmit={verstuur} className="space-y-5">
           <div>
@@ -138,11 +122,11 @@ export default function NieuwePost() {
           <div>
             <label className="block text-xs text-gray-500 mb-2">Van wie krijg je dit terug?</label>
 
-            {vrienden.length > 0 && (
+            {vriendenLijst.length > 0 && (
               <>
                 <p className="text-xs text-gray-400 mb-1">Vrienden</p>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {vrienden.map((vriend) => (
+                  {vriendenLijst.map((vriend) => (
                     <button
                       key={vriend.gebruiker_id}
                       type="button"
@@ -158,7 +142,7 @@ export default function NieuwePost() {
 
             <p className="text-xs text-gray-400 mb-1">Lokale contacten</p>
             <div className="flex flex-wrap gap-2">
-              {contacten.map((contact) => (
+              {contactenLijst.map((contact) => (
                 <button
                   key={contact.id}
                   type="button"
@@ -191,7 +175,8 @@ export default function NieuwePost() {
                 <button
                   type="button"
                   onClick={voegContactToe}
-                  className="bg-[#3B6D11] text-white rounded-lg px-3 py-2 text-sm font-medium"
+                  disabled={maakContact.isPending}
+                  className="bg-[#3B6D11] text-white rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-60"
                 >
                   Toevoegen
                 </button>
@@ -224,10 +209,10 @@ export default function NieuwePost() {
 
           <button
             type="submit"
-            disabled={bezig}
+            disabled={maakPost.isPending}
             className="w-full bg-[#3B6D11] text-white rounded-lg py-3 text-sm font-medium disabled:opacity-60"
           >
-            {bezig ? 'Bezig...' : 'Terugvraag bewaren'}
+            {maakPost.isPending ? 'Bezig...' : 'Terugvraag bewaren'}
           </button>
         </form>
       </div>

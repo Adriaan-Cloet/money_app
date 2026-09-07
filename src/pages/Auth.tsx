@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login, registreer, gebruikersnaamVrij } from '../services/auth'
 import { vertaalAuthFout } from '../services/authFouten'
+import { onlineManager } from '@tanstack/react-query'
+import { GeenVerbindingFout } from '../queries/verbinding'
 
 type Modus = 'login' | 'registreer'
 
@@ -18,6 +20,14 @@ export default function Auth() {
   async function verstuur(e: FormEvent) {
     e.preventDefault()
     setFout(null)
+
+    // Inloggen en registreren gaan altijd naar de server. Zonder deze controle
+    // zou vertaalAuthFout er "Er ging iets mis" van maken, want een mislukte
+    // fetch heeft geen authcode.
+    if (!onlineManager.isOnline()) {
+      setFout(new GeenVerbindingFout().message)
+      return
+    }
 
     if (modus === 'registreer' && !/^[A-Za-z0-9_]{3,20}$/.test(gebruikersnaam)) {
       setFout('Gebruikersnaam: 3-20 tekens, enkel letters, cijfers en _.')

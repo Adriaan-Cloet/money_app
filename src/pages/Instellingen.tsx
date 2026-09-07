@@ -1,18 +1,11 @@
-import { useEffect, useState } from 'react'
 import { logout } from '../services/auth'
-import { haalMijnGebruikersnaam } from '../services/gebruikers'
-import { useAuth } from '../context/AuthContext'
+import { useProfiel } from '../queries/gebruikers'
 
 export default function Instellingen() {
-  const { session } = useAuth()
-  const [gebruikersnaam, setGebruikersnaam] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!session) return
-    haalMijnGebruikersnaam(session.user.id).then(({ data }) =>
-      setGebruikersnaam(data?.gebruikersnaam ?? null),
-    )
-  }, [session])
+  // Uitloggen wist de hele cache. Dat gebeurt niet hier maar in AuthContext,
+  // via bewaakCacheEigenaar op de sessiewijziging, zodat het ook klopt als de
+  // sessie op een andere manier verdwijnt.
+  const profiel = useProfiel()
 
   return (
     <div>
@@ -20,7 +13,7 @@ export default function Instellingen() {
 
       <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
         <p className="text-xs text-gray-500">Ingelogd als</p>
-        <p className="text-base font-medium mt-1">{gebruikersnaam ?? '...'}</p>
+        <p className="text-base font-medium mt-1">{profiel.data?.gebruikersnaam ?? '...'}</p>
       </div>
 
       <button
